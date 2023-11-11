@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Editor</title>
+    <style>
+        #editor {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ccc;
+            font-family: monospace;
+            padding: 10px;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            tab-size: 4;
+        }
+    </style>
+</head>
+<body>
+
+<textarea id="editor" placeholder="Start typing in markdown..."></textarea>
+
+<script type="module">
+    class MarkdownEditor {
+        constructor(element) {
+            this.editor = element
+            this.editor.addEventListener('keydown', (e) => this.handleKeyDown(e))
+        }
+
+        insertTab() {
+            const start = this.editor.selectionStart
+            const end = this.editor.selectionEnd
+            const before = this.editor.value.substring(0, start)
+            const after = this.editor.value.substring(end)
+            const lineStart = before.lastIndexOf('\n') + 1
+            this.editor.value = before.substring(0, lineStart) + '\t' + before.substring(lineStart) + after
+            this.editor.selectionStart = this.editor.selectionEnd = start + 1
+        }
+
+        removeTab() {
+            const start = this.editor.selectionStart
+            const end = this.editor.selectionEnd
+            const before = this.editor.value.substring(0, start)
+            const after = this.editor.value.substring(end)
+            const lineStart = before.lastIndexOf('\n') + 1
+            const currentLine = before.substring(lineStart)
+            if (currentLine.startsWith('\t')) {
+                this.editor.value = before.substring(0, lineStart) + currentLine.substring(1) + after
+                this.editor.selectionStart = this.editor.selectionEnd = start - 1
+            }
+        }
+
+        handleEnterKey() {
+            const start = this.editor.selectionStart
+            const before = this.editor.value.substring(0, start)
+            const currentLine = before.substring(before.lastIndexOf('\n') + 1)
+            const match = currentLine.match(/^(\s*- )/)
+            if (match) {
+                const spaces = match[1]
+                const after = this.editor.value.substring(start)
+                this.editor.value = before + '\n' + spaces + after
+                this.editor.selectionStart = this.editor.selectionEnd = start + spaces.length + 1
+                return true
+            }
+            return false
+        }
+
+        handleKeyDown(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault()
+                if (!e.shiftKey) {
+                    this.insertTab()
+                } else {
+                    this.removeTab()
+                }
+            } else if (e.key === 'Enter') {
+                const didHandleEnter = this.handleEnterKey()
+                if (didHandleEnter) e.preventDefault()
+            }
+        }
+    }
+
+    // Initialize the class with the element ID.
+    const markdownEditor = new MarkdownEditor(document.getElementById('editor'))
+</script>
+
+</body>
+</html>

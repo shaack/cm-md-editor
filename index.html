@@ -22,44 +22,44 @@
 <textarea id="editor" placeholder="Start typing in markdown..."></textarea>
 
 <script>
-    var editor = document.getElementById('editor');
+    var editor = document.getElementById('editor')
 
-    editor.addEventListener('keydown', function(e) {
+    editor.addEventListener('keydown', function (e) {
         if (e.key === 'Tab' && !e.shiftKey) {
-            e.preventDefault();
-            var start = this.selectionStart;
-            var end = this.selectionEnd;
-            var before = this.value.substring(0, start);
-            var after = this.value.substring(end);
-            var lineStart = before.lastIndexOf('\n') + 1;
-            this.value = before.substring(0, lineStart) + '\t' + before.substring(lineStart) + after;
-            this.selectionStart = this.selectionEnd = start + 1;
+            e.preventDefault()
+            var start = this.selectionStart
+            var end = this.selectionEnd
+            var before = this.value.substring(0, start)
+            var after = this.value.substring(end)
+            var lineStart = before.lastIndexOf('\n') + 1
+            this.value = before.substring(0, lineStart) + '\t' + before.substring(lineStart) + after
+            this.selectionStart = this.selectionEnd = start + 1
         } else if (e.key === 'Tab' && e.shiftKey) {
-            e.preventDefault();
-            var start = this.selectionStart;
-            var end = this.selectionEnd;
-            var before = this.value.substring(0, start);
-            var after = this.value.substring(end);
-            var lineStart = before.lastIndexOf('\n') + 1;
-            var currentLine = before.substring(lineStart);
+            e.preventDefault()
+            var start = this.selectionStart
+            var end = this.selectionEnd
+            var before = this.value.substring(0, start)
+            var after = this.value.substring(end)
+            var lineStart = before.lastIndexOf('\n') + 1
+            var currentLine = before.substring(lineStart)
             if (currentLine.startsWith('\t')) {
-                this.value = before.substring(0, lineStart) + currentLine.substring(1) + after;
-                this.selectionStart = this.selectionEnd = start - 1;
+                this.value = before.substring(0, lineStart) + currentLine.substring(1) + after
+                this.selectionStart = this.selectionEnd = start - 1
             }
         } else if (e.key === 'Enter') {
-            var start = this.selectionStart;
-            var before = this.value.substring(0, start);
-            var currentLine = before.substring(before.lastIndexOf('\n') + 1);
-            var match = currentLine.match(/^(\s*- )/);
+            var start = this.selectionStart
+            var before = this.value.substring(0, start)
+            var currentLine = before.substring(before.lastIndexOf('\n') + 1)
+            var match = currentLine.match(/^(\s*- )/)
             if (match) {
-                e.preventDefault();
-                var spaces = match[1];
-                var after = this.value.substring(start);
-                this.value = before + '\n' + spaces + after;
-                this.selectionStart = this.selectionEnd = start + spaces.length + 1;
+                e.preventDefault()
+                var spaces = match[1]
+                var after = this.value.substring(start)
+                this.value = before + '\n' + spaces + after
+                this.selectionStart = this.selectionEnd = start + spaces.length + 1
             }
         }
-    });
+    })
 </script>
 
 </body>
