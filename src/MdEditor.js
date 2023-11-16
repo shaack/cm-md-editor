@@ -2,7 +2,7 @@
  * Author: Stefan Haack (https://shaack.com)
  * Date: 2023-11-12
  */
-export class ExtremeMinimalMdEditor {
+export class MdEditor {
     constructor(context) {
         this.element = context
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
