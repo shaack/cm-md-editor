@@ -37,7 +37,6 @@ export class MdEditor {
             const command = new Command(execute, unexecute, currentState)
             this.undoRedoManager.execute(command)
             this.lastSavedState = currentState // Save the current state as the last saved state
-            console.log('Saved state', currentState)
         }
     }
 
