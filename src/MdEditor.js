@@ -3,9 +3,42 @@
  * Date: 2023-11-12
  */
 export class MdEditor {
-    constructor(context) {
-        this.element = context
+
+    constructor(element) {
+        this.element = element
+        this.undoRedoManager = new UndoRedoManager()
+
+        this.lastSavedState = ""
+        // Save the initial state
+        this.saveState()
+
+        // Listen for changes
+        this.element.addEventListener('input', () => this.saveState())
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
+
+        // Listen for undo and redo shortcuts
+        window.addEventListener('keydown', (event) => {
+            if (event.metaKey && event.key === 'z') {
+                event.preventDefault()
+                if (event.shiftKey) {
+                    this.undoRedoManager.redo(this.element.value)
+                } else {
+                    this.undoRedoManager.undo(this.element.value)
+                }
+            }
+        })
+    }
+
+    saveState() {
+        const currentState = this.element.value
+        if (this.lastSavedState !== currentState) {
+            const execute = (state) => this.element.value = state
+            const unexecute = (state) => this.element.value = state
+            const command = new Command(execute, unexecute, currentState)
+            this.undoRedoManager.execute(command)
+            this.lastSavedState = currentState // Save the current state as the last saved state
+            console.log('Saved state', currentState)
+        }
     }
 
     handleEnterKey() {
@@ -56,10 +89,12 @@ export class MdEditor {
             e.preventDefault()
             this.element.value = before + '**' + selected + '**' + after
             this.element.selectionStart = this.element.selectionEnd = start + 2 + selected.length + 2
+            this.saveState()
         } else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
             e.preventDefault()
             this.element.value = before + '_' + selected + '_' + after
             this.element.selectionStart = this.element.selectionEnd = start + 1 + selected.length + 1
+            this.saveState()
         }
     }
 
@@ -92,5 +127,48 @@ export class MdEditor {
             this.element.value = before.substring(0, lineStart) + currentLine.substring(1) + after
             this.element.selectionStart = this.element.selectionEnd = start - 1
         }
+    }
+}
+
+class Command {
+    constructor(execute, unexecute, state) {
+        this.execute = execute
+        this.unexecute = unexecute
+        this.state = state
+    }
+}
+
+class UndoRedoManager {
+    constructor() {
+        this.undoStack = []
+        this.redoStack = []
+    }
+
+    execute(command) {
+        command.execute(command.state)
+        this.undoStack.push(command)
+        this.redoStack = [] // clear redoStack whenever new command is executed
+    }
+
+    undo(value) {
+        if (this.undoStack.length === 0) return
+        const command = this.undoStack.pop()
+        if(command.state === value) {
+            this.undo()
+            return
+        }
+        command.unexecute(command.state)
+        this.redoStack.push(command)
+    }
+
+    redo(value) {
+        if (this.redoStack.length === 0) return
+        const command = this.redoStack.pop()
+        if(command.state === value) {
+            this.redo()
+            return
+        }
+        command.execute(command.state)
+        this.undoStack.push(command)
     }
 }
