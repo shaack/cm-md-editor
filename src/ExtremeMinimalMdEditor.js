@@ -7,28 +7,6 @@ export class ExtremeMinimalMdEditor {
         this.element = context
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
     }
-    insertTab() {
-        const start = this.element.selectionStart
-        const end = this.element.selectionEnd
-        const before = this.element.value.substring(0, start)
-        const after = this.element.value.substring(end)
-        const lineStart = before.lastIndexOf('\n') + 1
-        this.element.value = before.substring(0, lineStart) + '\t' + before.substring(lineStart) + after
-        this.element.selectionStart = this.element.selectionEnd = start + 1
-    }
-
-    removeTab() {
-        const start = this.element.selectionStart
-        const end = this.element.selectionEnd
-        const before = this.element.value.substring(0, start)
-        const after = this.element.value.substring(end)
-        const lineStart = before.lastIndexOf('\n') + 1
-        const currentLine = before.substring(lineStart)
-        if (currentLine.startsWith('\t')) {
-            this.element.value = before.substring(0, lineStart) + currentLine.substring(1) + after
-            this.element.selectionStart = this.element.selectionEnd = start - 1
-        }
-    }
 
     handleEnterKey() {
         const start = this.element.selectionStart
@@ -50,7 +28,6 @@ export class ExtremeMinimalMdEditor {
         const before = this.element.value.substring(0, start)
         const currentLine = before.substring(before.lastIndexOf('\n') + 1)
         const isListMode = currentLine.match(/^\t*- /)
-
         if (e.key === 'Tab') {
             e.preventDefault()
             if (isListMode) {
@@ -64,7 +41,14 @@ export class ExtremeMinimalMdEditor {
             }
         } else if (e.key === 'Enter') {
             const didHandleEnter = this.handleEnterKey()
-            if (didHandleEnter) e.preventDefault()
+            if (didHandleEnter) {
+                if (currentLine.match(/^\s*- $/)) {
+                    // end list mode, remove the last two lines
+                    this.element.value = before.substring(0, before.lastIndexOf('\n')) + "\n"
+                } else {
+                    e.preventDefault()
+                }
+            }
         }
     }
 
@@ -84,5 +68,18 @@ export class ExtremeMinimalMdEditor {
         const after = this.element.value.substring(start)
         this.element.value = before.substring(0, lineStart) + '\t' + before.substring(lineStart) + after
         this.element.selectionStart = this.element.selectionEnd = start + 1
+    }
+
+    removeTab() {
+        const start = this.element.selectionStart
+        const end = this.element.selectionEnd
+        const before = this.element.value.substring(0, start)
+        const after = this.element.value.substring(end)
+        const lineStart = before.lastIndexOf('\n') + 1
+        const currentLine = before.substring(lineStart)
+        if (currentLine.startsWith('\t')) {
+            this.element.value = before.substring(0, lineStart) + currentLine.substring(1) + after
+            this.element.selectionStart = this.element.selectionEnd = start - 1
+        }
     }
 }
