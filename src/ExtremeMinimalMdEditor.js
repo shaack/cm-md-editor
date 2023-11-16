@@ -46,16 +46,43 @@ export class ExtremeMinimalMdEditor {
     }
 
     handleKeyDown(e) {
+        const start = this.element.selectionStart
+        const before = this.element.value.substring(0, start)
+        const currentLine = before.substring(before.lastIndexOf('\n') + 1)
+        const isListMode = currentLine.match(/^\t*- /)
+
         if (e.key === 'Tab') {
             e.preventDefault()
-            if (!e.shiftKey) {
-                this.insertTab()
+            if (isListMode) {
+                if (!e.shiftKey) {
+                    this.insertTabAtLineStart()
+                } else {
+                    this.removeTab()
+                }
             } else {
-                this.removeTab()
+                this.insertTabAtCursorPosition()
             }
         } else if (e.key === 'Enter') {
             const didHandleEnter = this.handleEnterKey()
             if (didHandleEnter) e.preventDefault()
         }
+    }
+
+    insertTabAtCursorPosition() {
+        const start = this.element.selectionStart
+        const end = this.element.selectionEnd
+        const before = this.element.value.substring(0, start)
+        const after = this.element.value.substring(end)
+        this.element.value = before + '\t' + after
+        this.element.selectionStart = this.element.selectionEnd = start + 1
+    }
+
+    insertTabAtLineStart() {
+        const start = this.element.selectionStart
+        const before = this.element.value.substring(0, start)
+        const lineStart = before.lastIndexOf('\n') + 1
+        const after = this.element.value.substring(start)
+        this.element.value = before.substring(0, lineStart) + '\t' + before.substring(lineStart) + after
+        this.element.selectionStart = this.element.selectionEnd = start + 1
     }
 }
