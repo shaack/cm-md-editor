@@ -154,6 +154,7 @@ class UndoRedoManager {
         if (this.undoStack.length === 0) return
         const command = this.undoStack.pop()
         if(command.state === value) {
+            this.redoStack.push(command)
             this.undo()
             return
         }
@@ -165,6 +166,7 @@ class UndoRedoManager {
         if (this.redoStack.length === 0) return
         const command = this.redoStack.pop()
         if(command.state === value) {
+            this.undoStack.push(command)
             this.redo()
             return
         }
