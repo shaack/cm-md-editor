@@ -95,6 +95,12 @@ export class MdEditor {
             this.element.value = before + '_' + selected + '_' + after
             this.element.selectionStart = this.element.selectionEnd = start + 1 + selected.length + 1
             this.saveState()
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+            // todo this could be an extension
+            e.preventDefault()
+            this.element.value = before + '[game id="' + selected + '"]' + after
+            this.element.selectionEnd = this.element.selectionStart = start + 10
+            this.saveState()
         }
     }
 
@@ -153,7 +159,7 @@ class UndoRedoManager {
     undo(value) {
         if (this.undoStack.length === 0) return
         const command = this.undoStack.pop()
-        if(command.state === value) {
+        if (command.state === value) {
             this.redoStack.push(command)
             this.undo()
             return
@@ -165,7 +171,7 @@ class UndoRedoManager {
     redo(value) {
         if (this.redoStack.length === 0) return
         const command = this.redoStack.pop()
-        if(command.state === value) {
+        if (command.state === value) {
             this.undoStack.push(command)
             this.redo()
             return
