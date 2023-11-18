@@ -1,5 +1,15 @@
 # cm-md-editor
 
-I mainly need one thing working in a markdown editor, which is lists and outlines. 
+This is a minimal **markdown editor** which is used in chessmail.de.
 
-This is the reason I created this markdown editor which just uses a textarea, but supports lists. In list-mode you can increase indentation with tab and reduce indentation with shift-tab.
+## Key features
+
+- Vanilla JavaScript module, without dependencies
+- Supports outlines with tab and shift-tab to indent and outdent
+- Supports the **bold** syntax with command-b/ctrl-b
+- Supports the _italic_ syntax with command-i/ctrl-i
+- Supports undo and redo with command-z/ctrl-z and command-shift-z/ctrl-shift-z
+- It is…
+  - lightweight
+  - easy to use
+  - fast
