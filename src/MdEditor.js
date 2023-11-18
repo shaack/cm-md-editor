@@ -24,7 +24,8 @@ export class MdEditor {
         this.undoRedoManager.execute(command)
     }
 
-    triggerInput() {
+    setValue(value) {
+        this.element.value = value
         let event = new Event('input', {
             bubbles: true,
             cancelable: true,
@@ -51,35 +52,29 @@ export class MdEditor {
             } else {
                 this.insertTabAtCursorPosition()
             }
-            this.triggerInput()
         } else if (e.key === 'Enter') {
             const didHandleEnter = this.handleEnterKey()
             if (didHandleEnter) {
                 if (currentLine.match(/^\s*- $/)) {
                     // end list mode, remove the last line
-                    this.element.value = before.substring(0, before.lastIndexOf('\n')) + "\n"
-                    this.triggerInput()
+                    this.setValue(before.substring(0, before.lastIndexOf('\n')) + "\n")
                 } else {
                     e.preventDefault()
-                    this.triggerInput()
                 }
             }
         } else if (e.ctrlKey || e.metaKey) {
             if (e.key === 'b') { // bold
                 e.preventDefault()
-                this.element.value = before + '**' + selected + '**' + after
+                this.setValue(before + '**' + selected + '**' + after)
                 this.element.selectionStart = this.element.selectionEnd = start + 2 + selected.length + 2
-                this.triggerInput()
             } else if (e.key === 'i') { // italic
                 e.preventDefault()
-                this.element.value = before + '_' + selected + '_' + after
+                this.setValue(before + '_' + selected + '_' + after)
                 this.element.selectionStart = this.element.selectionEnd = start + 1 + selected.length + 1
-                this.triggerInput()
             } else if (e.key === 'g') { // game todo this could be an extension
                 e.preventDefault()
-                this.element.value = before + '[game id="' + selected + '"]' + after
+                this.setValue(before + '[game id="' + selected + '"]' + after)
                 this.element.selectionEnd = this.element.selectionStart = start + 10
-                this.triggerInput()
             } else if (e.key === 'z') { // undo, redo
                 e.preventDefault()
                 if (e.shiftKey) {
@@ -99,7 +94,7 @@ export class MdEditor {
         if (match) {
             const spaces = match[1]
             const after = this.element.value.substring(start)
-            this.element.value = before + '\n' + spaces + after
+            this.setValue(before + '\n' + spaces + after)
             this.element.selectionStart = this.element.selectionEnd = start + spaces.length + 1
             return true
         }
@@ -111,7 +106,7 @@ export class MdEditor {
         const end = this.element.selectionEnd
         const before = this.element.value.substring(0, start)
         const after = this.element.value.substring(end)
-        this.element.value = before + '\t' + after
+        this.setValue(before + '\t' + after)
         this.element.selectionStart = this.element.selectionEnd = start + 1
     }
 
@@ -120,7 +115,7 @@ export class MdEditor {
         const before = this.element.value.substring(0, start)
         const lineStart = before.lastIndexOf('\n') + 1
         const after = this.element.value.substring(start)
-        this.element.value = before.substring(0, lineStart) + '\t' + before.substring(lineStart) + after
+        this.setValue(before.substring(0, lineStart) + '\t' + before.substring(lineStart) + after)
         this.element.selectionStart = this.element.selectionEnd = start + 1
     }
 
@@ -132,7 +127,7 @@ export class MdEditor {
         const lineStart = before.lastIndexOf('\n') + 1
         const currentLine = before.substring(lineStart)
         if (currentLine.startsWith('\t')) {
-            this.element.value = before.substring(0, lineStart) + currentLine.substring(1) + after
+            this.setValue(before.substring(0, lineStart) + currentLine.substring(1) + after)
             this.element.selectionStart = this.element.selectionEnd = start - 1
         }
     }
