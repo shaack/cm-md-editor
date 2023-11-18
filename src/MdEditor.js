@@ -8,51 +8,28 @@ export class MdEditor {
         this.element = element
         this.undoRedoManager = new UndoRedoManager()
 
-        this.lastSavedState = ""
-        // Save the initial state
         this.saveState()
-
-        // Listen for changes
-        this.element.addEventListener('input', () => this.saveState())
+        // listen to typing
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
-
-        // Listen for undo and redo shortcuts
-        window.addEventListener('keydown', (event) => {
-            if (event.metaKey && event.key === 'z') {
-                event.preventDefault()
-                if (event.shiftKey) {
-                    this.undoRedoManager.redo(this.element.value)
-                } else {
-                    this.undoRedoManager.undo(this.element.value)
-                }
-            }
+        this.element.addEventListener('input', () => {
+            this.saveState()
         })
     }
 
     saveState() {
         const currentState = this.element.value
-        if (this.lastSavedState !== currentState) {
-            const execute = (state) => this.element.value = state
-            const unexecute = (state) => this.element.value = state
-            const command = new Command(execute, unexecute, currentState)
-            this.undoRedoManager.execute(command)
-            this.lastSavedState = currentState // Save the current state as the last saved state
-        }
+        const execute = (state) => this.element.value = state
+        const unexecute = (state) => this.element.value = state
+        const command = new Command(execute, unexecute, currentState)
+        this.undoRedoManager.execute(command)
     }
 
-    handleEnterKey() {
-        const start = this.element.selectionStart
-        const before = this.element.value.substring(0, start)
-        const currentLine = before.substring(before.lastIndexOf('\n') + 1)
-        const match = currentLine.match(/^(\s*- )/)
-        if (match) {
-            const spaces = match[1]
-            const after = this.element.value.substring(start)
-            this.element.value = before + '\n' + spaces + after
-            this.element.selectionStart = this.element.selectionEnd = start + spaces.length + 1
-            return true
-        }
-        return false
+    triggerInput() {
+        let event = new Event('input', {
+            bubbles: true,
+            cancelable: true,
+        })
+        this.element.dispatchEvent(event)
     }
 
     handleKeyDown(e) {
@@ -74,33 +51,59 @@ export class MdEditor {
             } else {
                 this.insertTabAtCursorPosition()
             }
+            this.triggerInput()
         } else if (e.key === 'Enter') {
             const didHandleEnter = this.handleEnterKey()
             if (didHandleEnter) {
                 if (currentLine.match(/^\s*- $/)) {
                     // end list mode, remove the last line
                     this.element.value = before.substring(0, before.lastIndexOf('\n')) + "\n"
+                    this.triggerInput()
                 } else {
                     e.preventDefault()
+                    this.triggerInput()
                 }
             }
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-            e.preventDefault()
-            this.element.value = before + '**' + selected + '**' + after
-            this.element.selectionStart = this.element.selectionEnd = start + 2 + selected.length + 2
-            this.saveState()
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
-            e.preventDefault()
-            this.element.value = before + '_' + selected + '_' + after
-            this.element.selectionStart = this.element.selectionEnd = start + 1 + selected.length + 1
-            this.saveState()
-        } else if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
-            // todo this could be an extension
-            e.preventDefault()
-            this.element.value = before + '[game id="' + selected + '"]' + after
-            this.element.selectionEnd = this.element.selectionStart = start + 10
-            this.saveState()
+        } else if (e.ctrlKey || e.metaKey) {
+            if (e.key === 'b') { // bold
+                e.preventDefault()
+                this.element.value = before + '**' + selected + '**' + after
+                this.element.selectionStart = this.element.selectionEnd = start + 2 + selected.length + 2
+                this.triggerInput()
+            } else if (e.key === 'i') { // italic
+                e.preventDefault()
+                this.element.value = before + '_' + selected + '_' + after
+                this.element.selectionStart = this.element.selectionEnd = start + 1 + selected.length + 1
+                this.triggerInput()
+            } else if (e.key === 'g') { // game todo this could be an extension
+                e.preventDefault()
+                this.element.value = before + '[game id="' + selected + '"]' + after
+                this.element.selectionEnd = this.element.selectionStart = start + 10
+                this.triggerInput()
+            } else if (e.key === 'z') { // undo, redo
+                e.preventDefault()
+                if (e.shiftKey) {
+                    this.undoRedoManager.redo(this.element.value)
+                } else {
+                    this.undoRedoManager.undo(this.element.value)
+                }
+            }
         }
+    }
+
+    handleEnterKey() {
+        const start = this.element.selectionStart
+        const before = this.element.value.substring(0, start)
+        const currentLine = before.substring(before.lastIndexOf('\n') + 1)
+        const match = currentLine.match(/^(\s*- )/)
+        if (match) {
+            const spaces = match[1]
+            const after = this.element.value.substring(start)
+            this.element.value = before + '\n' + spaces + after
+            this.element.selectionStart = this.element.selectionEnd = start + spaces.length + 1
+            return true
+        }
+        return false
     }
 
     insertTabAtCursorPosition() {
@@ -150,31 +153,24 @@ class UndoRedoManager {
     }
 
     execute(command) {
+        console.log("execute", command.state)
         command.execute(command.state)
         this.undoStack.push(command)
         this.redoStack = [] // clear redoStack whenever new command is executed
     }
 
-    undo(value) {
+    undo() {
         if (this.undoStack.length === 0) return
         const command = this.undoStack.pop()
-        if (command.state === value) {
-            this.redoStack.push(command)
-            this.undo()
-            return
-        }
+        console.log("undo", command, this.undoStack)
         command.unexecute(command.state)
         this.redoStack.push(command)
     }
 
-    redo(value) {
+    redo() {
+        console.log("redo", this.redoStack)
         if (this.redoStack.length === 0) return
         const command = this.redoStack.pop()
-        if (command.state === value) {
-            this.undoStack.push(command)
-            this.redo()
-            return
-        }
         command.execute(command.state)
         this.undoStack.push(command)
     }
