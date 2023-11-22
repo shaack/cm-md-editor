@@ -87,6 +87,8 @@ export class MdEditor {
         this.element.selectionStart = this.element.selectionEnd = start + 1
     }
 
+    // test
+
     removeTab() {
         const start = this.element.selectionStart
         const before = this.element.value.substring(0, start)
