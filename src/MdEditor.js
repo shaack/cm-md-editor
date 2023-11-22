@@ -64,16 +64,15 @@ export class MdEditor {
         const before = this.element.value.substring(0, start)
         const currentLine = before.substring(before.lastIndexOf('\n') + 1)
         const matchEmpty = currentLine.match(/^(\s*- )$/)
-        const match = currentLine.match(/^(\s*- )/)
-        if(matchEmpty) {
-            e.preventDefault()
+        const matchHyphen = currentLine.match(/^(\s*- )/)
+        console.log("start", start, "before", before, "currentLine", currentLine, "matchEmpty", matchEmpty, "matchHyphen", matchHyphen)
+        console.log("this.element.selectionStart", this.element.selectionStart, "this.element.selectionEnd", this.element.selectionEnd)
+        if (matchEmpty) {
             const pre = matchEmpty[1]
-            this.element.selectionStart = before.lastIndexOf('\n') + 1
-            this.element.selectionEnd = this.element.selectionStart + pre.length
-            this.insertTextAtCursor('')
-        } else if (match) {
+            this.element.selectionStart = this.element.selectionEnd - pre.length - 1
+        } else if (matchHyphen) {
             e.preventDefault()
-            const pre = match[1]
+            const pre = matchHyphen[1]
             this.insertTextAtCursor('\n' + pre)
         }
     }
