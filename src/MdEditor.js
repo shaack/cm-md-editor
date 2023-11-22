@@ -6,12 +6,11 @@ export class MdEditor {
 
     constructor(element) {
         this.element = element
-
-        // listen to typing
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
     }
 
     insertTextAtCursor(text) {
+        // execCommand is deprecated, but without alternative to insert text and preserve the correct undo/redo stack
         document.execCommand("insertText", false, text)
     }
 
@@ -65,8 +64,6 @@ export class MdEditor {
         const currentLine = before.substring(before.lastIndexOf('\n') + 1)
         const matchEmpty = currentLine.match(/^(\s*- )$/)
         const matchHyphen = currentLine.match(/^(\s*- )/)
-        console.log("start", start, "before", before, "currentLine", currentLine, "matchEmpty", matchEmpty, "matchHyphen", matchHyphen)
-        console.log("this.element.selectionStart", this.element.selectionStart, "this.element.selectionEnd", this.element.selectionEnd)
         if (matchEmpty) {
             const pre = matchEmpty[1]
             this.element.selectionStart = this.element.selectionEnd - pre.length - 1
