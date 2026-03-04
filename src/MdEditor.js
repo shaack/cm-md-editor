@@ -8,6 +8,7 @@ export class MdEditor {
         this.element = element
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
         this.createToolbar()
+        this.createHighlightBackdrop()
     }
 
     createToolbar() {
@@ -44,6 +45,92 @@ export class MdEditor {
             })
             toolbar.appendChild(button)
         })
+    }
+
+    createHighlightBackdrop() {
+        const container = this.element.parentNode
+        container.style.position = 'relative'
+        this.backdrop = document.createElement('div')
+        this.highlightLayer = document.createElement('div')
+        this.backdrop.appendChild(this.highlightLayer)
+        container.appendChild(this.backdrop)
+
+        // Copy textarea computed styles to backdrop
+        const cs = window.getComputedStyle(this.element)
+        this.backdrop.style.cssText = `position:absolute;overflow:hidden;pointer-events:none;z-index:1;`
+        this.highlightLayer.style.cssText = `white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;color:transparent;`
+
+        const syncStyles = () => {
+            const cs = window.getComputedStyle(this.element)
+            const props = ['font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing',
+                'tab-size', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left']
+            props.forEach(p => this.highlightLayer.style[p.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = cs.getPropertyValue(p))
+            this.highlightLayer.style.boxSizing = 'border-box'
+            // Use clientWidth to match the textarea's content area (excludes scrollbar)
+            this.highlightLayer.style.width = this.element.clientWidth + 'px'
+            const borderTop = parseInt(cs.getPropertyValue('border-top-width')) || 0
+            const borderLeft = parseInt(cs.getPropertyValue('border-left-width')) || 0
+            this.backdrop.style.top = (this.element.offsetTop + borderTop) + 'px'
+            this.backdrop.style.left = (this.element.offsetLeft + borderLeft) + 'px'
+            this.backdrop.style.width = this.element.clientWidth + 'px'
+            this.backdrop.style.height = this.element.clientHeight + 'px'
+        }
+        syncStyles()
+
+        // Make textarea background transparent so backdrop shows through
+        this.element.style.background = 'transparent'
+        this.element.style.position = 'relative'
+        this.element.style.caretColor = cs.color
+
+        // Sync scroll
+        this.element.addEventListener('scroll', () => {
+            this.highlightLayer.style.transform = `translate(0, -${this.element.scrollTop}px)`
+        })
+
+        // Update on input
+        this.element.addEventListener('input', () => this.updateHighlight())
+        new ResizeObserver(() => { syncStyles(); this.updateHighlight() }).observe(this.element)
+        this.updateHighlight()
+    }
+
+    updateHighlight() {
+        const text = this.element.value
+        const lines = text.split('\n')
+        let html = ''
+        for (let i = 0; i < lines.length; i++) {
+            if (i > 0) html += '\n'
+            let line = lines[i]
+            let result = this.escapeHtml(line)
+
+            // Headings: emphasize entire line
+            const headingMatch = line.match(/^(#{1,6}) /)
+            if (headingMatch) {
+                const hashes = this.escapeHtml(headingMatch[1])
+                const rest = this.escapeHtml(line.substring(headingMatch[0].length))
+                const opacity = Math.max(0.3, 0.8 - (headingMatch[1].length - 1) * 0.1)
+                result = `<span style="color:rgba(100,160,255,${opacity})">${hashes} </span><span style="color:rgba(100,160,255,${opacity})">${rest}</span>`
+            } else {
+                // Bold **text**
+                result = result.replace(/(\*\*)(.*?)(\*\*)/g,
+                    '<span style="color:rgba(255,180,80,0.5)">$1</span><span style="color:rgba(255,180,80,0.8)">$2</span><span style="color:rgba(255,180,80,0.5)">$3</span>')
+                // Italic _text_
+                result = result.replace(/((?:^|[^\\]))(\_)(.*?[^\\])(\_)/g,
+                    '$1<span style="color:rgba(180,130,255,0.5)">$2</span><span style="color:rgba(180,130,255,0.8)">$3</span><span style="color:rgba(180,130,255,0.5)">$4</span>')
+                // Unordered list markers
+                result = result.replace(/^(\t*)(- )/, (_, tabs, marker) =>
+                    this.escapeHtml(tabs) + '<span style="color:rgba(100,200,150,0.7)">' + this.escapeHtml(marker) + '</span>')
+                // Ordered list markers
+                result = result.replace(/^(\t*)(\d+\. )/, (_, tabs, marker) =>
+                    this.escapeHtml(tabs) + '<span style="color:rgba(100,200,150,0.7)">' + this.escapeHtml(marker) + '</span>')
+            }
+            html += result
+        }
+        // Trailing newline so the backdrop height matches the textarea
+        this.highlightLayer.innerHTML = html + '\n'
+    }
+
+    escapeHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     }
 
     getCurrentLineInfo() {
