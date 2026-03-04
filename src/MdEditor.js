@@ -70,22 +70,37 @@ export class MdEditor {
         }
     }
 
-    toggleBold() {
-        const selected = this.element.value.substring(this.element.selectionStart, this.element.selectionEnd)
-        if (selected) {
-            this.insertTextAtCursor('**' + selected + '**')
+    toggleWrap(marker) {
+        const start = this.element.selectionStart
+        const end = this.element.selectionEnd
+        const text = this.element.value
+        const len = marker.length
+        const before = text.substring(start - len, start)
+        const after = text.substring(end, end + len)
+        if (before === marker && after === marker) {
+            // Remove markers, keep selection on the inner text
+            this.element.selectionStart = start - len
+            this.element.selectionEnd = end + len
+            const selected = text.substring(start, end)
+            this.insertTextAtCursor(selected)
+            this.element.selectionStart = start - len
+            this.element.selectionEnd = end - len
+        } else if (start !== end) {
+            // Wrap selection, keep selection on the inner text
+            this.insertTextAtCursor(marker + text.substring(start, end) + marker)
+            this.element.selectionStart = start + len
+            this.element.selectionEnd = end + len
         } else {
-            this.insertTextAtCursor('**')
+            this.insertTextAtCursor(marker)
         }
     }
 
+    toggleBold() {
+        this.toggleWrap('**')
+    }
+
     toggleItalic() {
-        const selected = this.element.value.substring(this.element.selectionStart, this.element.selectionEnd)
-        if (selected) {
-            this.insertTextAtCursor('_' + selected + '_')
-        } else {
-            this.insertTextAtCursor('_')
-        }
+        this.toggleWrap('_')
     }
 
     insertUnorderedList() {
@@ -137,18 +152,10 @@ export class MdEditor {
         } else if (e.ctrlKey || e.metaKey) {
             if (e.key === 'b') { // bold
                 e.preventDefault()
-                if (selected) {
-                    this.insertTextAtCursor('**' + selected + '**')
-                } else {
-                    this.insertTextAtCursor('**')
-                }
+                this.toggleBold()
             } else if (e.key === 'i') { // italic
                 e.preventDefault()
-                if (selected) {
-                    this.insertTextAtCursor('_' + selected + '_')
-                } else {
-                    this.insertTextAtCursor('_')
-                }
+                this.toggleItalic()
             } else if (e.key === 'e') { // game todo this could be an extension
                 e.preventDefault()
                 this.insertTextAtCursor('[game id="' + selected + '"]')
