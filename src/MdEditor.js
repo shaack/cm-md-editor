@@ -141,7 +141,7 @@ export class MdEditor {
         const before = this.element.value.substring(0, start)
         const selected = this.element.value.substring(start, end)
         const currentLine = before.substring(before.lastIndexOf('\n') + 1)
-        const isListMode = currentLine.match(/^\t*- /)
+        const isListMode = currentLine.match(/^\t*- /) || currentLine.match(/^\t*\d+\. /)
         if (e.key === 'Tab') {
             e.preventDefault()
             if (isListMode) {
@@ -175,15 +175,21 @@ export class MdEditor {
         const start = this.element.selectionStart
         const before = this.element.value.substring(0, start)
         const currentLine = before.substring(before.lastIndexOf('\n') + 1)
-        const matchEmpty = currentLine.match(/^(\s*- )$/)
+        const matchEmptyUl = currentLine.match(/^(\s*- )$/)
+        const matchEmptyOl = currentLine.match(/^(\s*)\d+\. $/)
         const matchHyphen = currentLine.match(/^(\s*- )/)
-        if (matchEmpty) {
-            const pre = matchEmpty[1]
-            this.element.selectionStart = this.element.selectionEnd - pre.length - 1
+        const matchOl = currentLine.match(/^(\s*)(\d+)\. ./)
+        if (matchEmptyUl) {
+            this.element.selectionStart = this.element.selectionEnd - matchEmptyUl[1].length - 1
+        } else if (matchEmptyOl) {
+            this.element.selectionStart = this.element.selectionEnd - matchEmptyOl[0].length - 1
         } else if (matchHyphen) {
             e.preventDefault()
-            const pre = matchHyphen[1]
-            this.insertTextAtCursor('\n' + pre)
+            this.insertTextAtCursor('\n' + matchHyphen[1])
+        } else if (matchOl) {
+            e.preventDefault()
+            const nextNum = parseInt(matchOl[2]) + 1
+            this.insertTextAtCursor('\n' + matchOl[1] + nextNum + '. ')
         }
     }
 
