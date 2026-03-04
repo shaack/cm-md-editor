@@ -32,10 +32,12 @@ export class MdEditor {
             button.title = btn.title
             button.style.cssText = 'background:none;border:1px solid currentColor;border-radius:3px;cursor:pointer;padding:2px;display:flex;align-items:center;justify-content:center;color:inherit;opacity:0.7;'
             button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">${btn.icon}</svg>`
+            button.addEventListener('mousedown', (e) => {
+                e.preventDefault()
+            })
             button.addEventListener('click', (e) => {
                 e.preventDefault()
                 btn.action()
-                this.element.focus()
             })
             toolbar.appendChild(button)
         })
