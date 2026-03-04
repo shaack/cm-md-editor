@@ -96,7 +96,8 @@ export class MdEditor {
             this.element.selectionStart = start + len
             this.element.selectionEnd = end + len
         } else {
-            this.insertTextAtCursor(marker)
+            this.insertTextAtCursor(marker + marker)
+            this.element.selectionStart = this.element.selectionEnd = start + len
         }
     }
 
