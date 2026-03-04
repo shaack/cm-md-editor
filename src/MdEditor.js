@@ -15,23 +15,26 @@ export class MdEditor {
         this.element.parentNode.insertBefore(wrapper, this.element)
         wrapper.appendChild(this.element)
         const toolbar = document.createElement('div')
-        toolbar.style.cssText = 'display:flex;gap:2px;padding:4px;flex-wrap:wrap;'
+        toolbar.style.cssText = 'display:flex;gap:1px;padding:2px;flex-wrap:wrap;background:rgba(128,128,128,0.15);border:1px solid rgba(128,128,128,0.3);border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;width:100%;'
         wrapper.insertBefore(toolbar, this.element)
+        this.element.style.borderRadius = '0 0 4px 4px'
         const buttons = [
-            {title: 'H1', icon: '<path d="M4 3v18h3v-7h6v7h3V3h-3v8H7V3zm17 14v-4h-2V3h-3v18h3v-4z"/>', action: () => this.toggleHeading(1)},
-            {title: 'H2', icon: '<path d="M4 3v18h3v-7h6v7h3V3h-3v8H7V3zm11 18h8v-3h-5l4.5-5.5A3.5 3.5 0 0019 6h-1a3.49 3.49 0 00-3.5 3.5h3A.5.5 0 0118 9h1a.5.5 0 01.4.8L15 15.33z"/>', action: () => this.toggleHeading(2)},
-            {title: 'H3', icon: '<path d="M4 3v18h3v-7h6v7h3V3h-3v8H7V3zm11 18h5a3 3 0 001.75-5.43A3 3 0 0020 6h-5v3h5v3h-4v3h4v3h-5z"/>', action: () => this.toggleHeading(3)},
-            {title: 'Bold', icon: '<path d="M6 4v16h7a4 4 0 001.69-7.63A3.5 3.5 0 0012.5 4zm3 3h3.5a.5.5 0 010 1H9zm0 4h4a1 1 0 010 2H9zm0 5h4a1 1 0 010 2H9z"/>', action: () => this.toggleBold()},
-            {title: 'Italic', icon: '<path d="M10 4v3h2.2l-3.4 10H6v3h8v-3h-2.2l3.4-10H18V4z"/>', action: () => this.toggleItalic()},
-            {title: 'Unordered List', icon: '<circle cx="4" cy="7" r="2"/><circle cx="4" cy="17" r="2"/><rect x="9" y="5.5" width="12" height="3" rx="1"/><rect x="9" y="15.5" width="12" height="3" rx="1"/>', action: () => this.insertUnorderedList()},
-            {title: 'Ordered List', icon: '<text x="2" y="9" font-size="8" font-family="sans-serif" font-weight="bold">1</text><text x="2" y="19" font-size="8" font-family="sans-serif" font-weight="bold">2</text><rect x="9" y="5.5" width="12" height="3" rx="1"/><rect x="9" y="15.5" width="12" height="3" rx="1"/>', action: () => this.insertOrderedList()},
+            {title: 'Heading 1', icon: '<text x="12" y="17.5" font-size="16" font-family="system-ui,sans-serif" font-weight="700" text-anchor="middle">H1</text>', action: () => this.toggleHeading(1)},
+            {title: 'Heading 2', icon: '<text x="12" y="17.5" font-size="16" font-family="system-ui,sans-serif" font-weight="700" text-anchor="middle">H2</text>', action: () => this.toggleHeading(2)},
+            {title: 'Heading 3', icon: '<text x="12" y="17.5" font-size="16" font-family="system-ui,sans-serif" font-weight="700" text-anchor="middle">H3</text>', action: () => this.toggleHeading(3)},
+            {title: 'Bold', icon: '<text x="12" y="18" font-size="18" font-family="system-ui,sans-serif" font-weight="800" text-anchor="middle">B</text>', action: () => this.toggleBold()},
+            {title: 'Italic', icon: '<text x="12" y="18" font-size="18" font-family="system-ui,sans-serif" font-weight="600" font-style="italic" text-anchor="middle">I</text>', action: () => this.toggleItalic()},
+            {title: 'Unordered List', icon: '<circle cx="5" cy="7" r="1.8"/><circle cx="5" cy="17" r="1.8"/><rect x="9.5" y="5.5" width="11" height="3" rx="1"/><rect x="9.5" y="15.5" width="11" height="3" rx="1"/>', action: () => this.insertUnorderedList()},
+            {title: 'Ordered List', icon: '<text x="3" y="9.5" font-size="8.5" font-family="system-ui,sans-serif" font-weight="700">1</text><text x="3" y="19.5" font-size="8.5" font-family="system-ui,sans-serif" font-weight="700">2</text><rect x="9.5" y="5.5" width="11" height="3" rx="1"/><rect x="9.5" y="15.5" width="11" height="3" rx="1"/>', action: () => this.insertOrderedList()},
         ]
         buttons.forEach(btn => {
             const button = document.createElement('button')
             button.type = 'button'
             button.title = btn.title
-            button.style.cssText = 'background:none;border:1px solid currentColor;border-radius:3px;cursor:pointer;padding:2px;display:flex;align-items:center;justify-content:center;color:inherit;opacity:0.7;'
-            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">${btn.icon}</svg>`
+            button.style.cssText = 'background:none;border:none;border-radius:3px;cursor:pointer;padding:4px 6px;display:flex;align-items:center;justify-content:center;color:inherit;opacity:0.6;transition:opacity 0.15s,background 0.15s;'
+            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">${btn.icon}</svg>`
+            button.addEventListener('mouseenter', () => { button.style.opacity = '1'; button.style.background = 'rgba(128,128,128,0.2)' })
+            button.addEventListener('mouseleave', () => { button.style.opacity = '0.6'; button.style.background = 'none' })
             button.addEventListener('mousedown', (e) => {
                 e.preventDefault()
             })
