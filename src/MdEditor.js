@@ -45,6 +45,28 @@ export class MdEditor {
             })
             toolbar.appendChild(button)
         })
+
+        // Spacer to push wrap toggle to the right
+        const spacer = document.createElement('div')
+        spacer.style.cssText = 'flex:1;'
+        toolbar.appendChild(spacer)
+
+        // Wrap toggle button
+        this.wrapEnabled = true
+        this.wrapButton = document.createElement('button')
+        this.wrapButton.type = 'button'
+        this.wrapButton.title = 'Toggle word wrap'
+        this.wrapButton.style.cssText = 'background:none;border:none;border-radius:3px;cursor:pointer;padding:4px 6px;display:flex;align-items:center;justify-content:center;color:inherit;opacity:0.6;transition:opacity 0.15s,background 0.15s;'
+        this.wrapButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 10h6v2H4zm0-5h16c0 0 0 0 0 0v0c0 2.2-1.8 4-4 4h-2l2-2h-1l-3 3 3 3h1l-2-2h2c3.3 0 6-2.7 6-6H4z"/></svg>`
+        this.wrapButton.addEventListener('mouseenter', () => { this.wrapButton.style.opacity = '1'; this.wrapButton.style.background = 'rgba(128,128,128,0.2)' })
+        this.wrapButton.addEventListener('mouseleave', () => { this.wrapButton.style.opacity = this.wrapEnabled ? '0.9' : '0.4'; this.wrapButton.style.background = 'none' })
+        this.wrapButton.addEventListener('mousedown', (e) => e.preventDefault())
+        this.wrapButton.addEventListener('click', (e) => {
+            e.preventDefault()
+            this.toggleWrapMode()
+        })
+        this.wrapButton.style.opacity = '0.9'
+        toolbar.appendChild(this.wrapButton)
     }
 
     createHighlightBackdrop() {
@@ -232,6 +254,17 @@ export class MdEditor {
             '<span style="color:rgba(200,120,120,0.5)">$1$2$3$4</span>')
 
         return result
+    }
+
+    toggleWrapMode() {
+        this.wrapEnabled = !this.wrapEnabled
+        const wrap = this.wrapEnabled
+        this.element.style.whiteSpace = wrap ? 'pre-wrap' : 'pre'
+        this.element.style.overflowX = wrap ? 'hidden' : 'auto'
+        this.highlightLayer.style.whiteSpace = wrap ? 'pre-wrap' : 'pre'
+        this.highlightLayer.style.overflowWrap = wrap ? 'break-word' : 'normal'
+        this.wrapButton.style.opacity = wrap ? '0.9' : '0.4'
+        this.updateHighlight()
     }
 
     escapeHtml(str) {
