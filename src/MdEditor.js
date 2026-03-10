@@ -78,13 +78,15 @@ export class MdEditor {
         syncStyles()
 
         // Make textarea background transparent so backdrop shows through
+        this.element.style.overscrollBehavior = 'none'
         this.element.style.background = 'transparent'
         this.element.style.position = 'relative'
         this.element.style.caretColor = cs.color
 
         // Sync scroll
         this.element.addEventListener('scroll', () => {
-            this.highlightLayer.style.transform = `translate(0, -${this.element.scrollTop}px)`
+            this.backdrop.scrollTop = this.element.scrollTop
+            this.backdrop.scrollLeft = this.element.scrollLeft
         })
 
         // Update on input
@@ -97,36 +99,139 @@ export class MdEditor {
         const text = this.element.value
         const lines = text.split('\n')
         let html = ''
+        let inCodeBlock = false
+
         for (let i = 0; i < lines.length; i++) {
             if (i > 0) html += '\n'
-            let line = lines[i]
-            let result = this.escapeHtml(line)
+            const line = lines[i]
 
-            // Headings: emphasize entire line
+            // Fenced code block delimiter
+            if (/^`{3,}/.test(line)) {
+                inCodeBlock = !inCodeBlock
+                html += '<span style="color:rgba(130,170,200,0.7)">' + this.escapeHtml(line) + '</span>'
+                continue
+            }
+            if (inCodeBlock) {
+                html += '<span style="color:rgba(130,170,200,0.5)">' + this.escapeHtml(line) + '</span>'
+                continue
+            }
+
+            // Horizontal rule (3+ of same -, *, or _ with optional spaces)
+            if (/^\s{0,3}([-*_])\s*(\1\s*){2,}$/.test(line)) {
+                html += '<span style="color:rgba(128,128,128,0.6)">' + this.escapeHtml(line) + '</span>'
+                continue
+            }
+
+            // Headings
             const headingMatch = line.match(/^(#{1,6}) /)
             if (headingMatch) {
-                const hashes = this.escapeHtml(headingMatch[1])
-                const rest = this.escapeHtml(line.substring(headingMatch[0].length))
                 const opacity = Math.max(0.3, 0.8 - (headingMatch[1].length - 1) * 0.1)
-                result = `<span style="color:rgba(100,160,255,${opacity})">${hashes} </span><span style="color:rgba(100,160,255,${opacity})">${rest}</span>`
-            } else {
-                // Bold **text**
-                result = result.replace(/(\*\*)(.*?)(\*\*)/g,
-                    '<span style="color:rgba(255,180,80,0.5)">$1</span><span style="color:rgba(255,180,80,0.8)">$2</span><span style="color:rgba(255,180,80,0.5)">$3</span>')
-                // Italic _text_
-                result = result.replace(/((?:^|[^\\]))(\_)(.*?[^\\])(\_)/g,
-                    '$1<span style="color:rgba(180,130,255,0.5)">$2</span><span style="color:rgba(180,130,255,0.8)">$3</span><span style="color:rgba(180,130,255,0.5)">$4</span>')
-                // Unordered list markers
-                result = result.replace(/^(\t*)(- )/, (_, tabs, marker) =>
-                    this.escapeHtml(tabs) + '<span style="color:rgba(100,200,150,0.7)">' + this.escapeHtml(marker) + '</span>')
-                // Ordered list markers
-                result = result.replace(/^(\t*)(\d+\. )/, (_, tabs, marker) =>
-                    this.escapeHtml(tabs) + '<span style="color:rgba(100,200,150,0.7)">' + this.escapeHtml(marker) + '</span>')
+                html += '<span style="color:rgba(100,160,255,' + opacity + ')">' + this.escapeHtml(line) + '</span>'
+                continue
             }
-            html += result
+
+            // Reference link definition [ref]: url
+            const refMatch = line.match(/^(\s{0,3}\[)([^\]]+)(\]:\s+)(.+)$/)
+            if (refMatch) {
+                html += '<span style="color:rgba(100,180,220,0.5)">' + this.escapeHtml(refMatch[1]) + '</span>'
+                    + '<span style="color:rgba(100,180,220,0.8)">' + this.escapeHtml(refMatch[2]) + '</span>'
+                    + '<span style="color:rgba(100,180,220,0.5)">' + this.escapeHtml(refMatch[3]) + '</span>'
+                    + '<span style="color:rgba(100,180,220,0.6)">' + this.escapeHtml(refMatch[4]) + '</span>'
+                continue
+            }
+
+            // Blockquote prefix
+            let prefix = ''
+            let rest = line
+            const bqMatch = line.match(/^(\s*>+\s?)/)
+            if (bqMatch) {
+                prefix = '<span style="color:rgba(128,180,128,0.7)">' + this.escapeHtml(bqMatch[0]) + '</span>'
+                rest = line.substring(bqMatch[0].length)
+            }
+
+            html += prefix + this.highlightInline(rest)
         }
         // Trailing newline so the backdrop height matches the textarea
         this.highlightLayer.innerHTML = html + '\n'
+    }
+
+    highlightInline(line) {
+        // Split by inline code to protect code content from other highlighting
+        const segments = []
+        let lastIndex = 0
+        const codeRegex = /`([^`]+)`/g
+        let match
+
+        while ((match = codeRegex.exec(line)) !== null) {
+            if (match.index > lastIndex) {
+                segments.push({type: 'text', content: line.substring(lastIndex, match.index)})
+            }
+            segments.push({type: 'code', content: match[0]})
+            lastIndex = codeRegex.lastIndex
+        }
+        if (lastIndex < line.length) {
+            segments.push({type: 'text', content: line.substring(lastIndex)})
+        }
+        if (segments.length === 0) {
+            segments.push({type: 'text', content: ''})
+        }
+
+        let result = ''
+        for (const seg of segments) {
+            if (seg.type === 'code') {
+                result += '<span style="color:rgba(130,170,200,0.7)">' + this.escapeHtml(seg.content) + '</span>'
+            } else {
+                result += this.highlightTextSegment(this.escapeHtml(seg.content))
+            }
+        }
+        return result
+    }
+
+    highlightTextSegment(escaped) {
+        let result = escaped
+
+        // Escape sequences: dim the backslash before markdown punctuation
+        result = result.replace(/\\([\\`*_{}[\]()#+\-.!~|])/g,
+            '<span style="color:rgba(128,128,128,0.4)">\\</span>$1')
+
+        // Unordered list markers with optional task list checkbox
+        result = result.replace(/^(\t*)(- )(\[[ xX]\] )?/, (_, tabs, marker, task) => {
+            let r = tabs + '<span style="color:rgba(100,200,150,0.7)">' + marker + '</span>'
+            if (task) {
+                r += '<span style="color:rgba(100,200,150,0.7)">' + task + '</span>'
+            }
+            return r
+        })
+
+        // Ordered list markers
+        result = result.replace(/^(\t*)(\d+\. )/, (_, tabs, marker) =>
+            tabs + '<span style="color:rgba(100,200,150,0.7)">' + marker + '</span>')
+
+        // Images ![alt](url) and Links [text](url)
+        result = result.replace(/(!?\[)(.*?)(\]\()(.+?)(\))/g,
+            '<span style="color:rgba(100,180,220,0.5)">$1</span><span style="color:rgba(100,180,220,0.8)">$2</span><span style="color:rgba(100,180,220,0.5)">$3</span><span style="color:rgba(100,180,220,0.6)">$4</span><span style="color:rgba(100,180,220,0.5)">$5</span>')
+
+        // Reference links [text][ref]
+        result = result.replace(/(\[)(.*?)(\]\[)(.*?)(\])/g,
+            '<span style="color:rgba(100,180,220,0.5)">$1</span><span style="color:rgba(100,180,220,0.8)">$2</span><span style="color:rgba(100,180,220,0.5)">$3</span><span style="color:rgba(100,180,220,0.6)">$4</span><span style="color:rgba(100,180,220,0.5)">$5</span>')
+
+        // Strikethrough ~~text~~
+        result = result.replace(/(~~)(.*?)(~~)/g,
+            '<span style="color:rgba(255,100,100,0.5)">$1</span><span style="color:rgba(255,100,100,0.7)">$2</span><span style="color:rgba(255,100,100,0.5)">$3</span>')
+
+        // Bold **text**
+        result = result.replace(/(\*\*)(.*?)(\*\*)/g,
+            '<span style="color:rgba(255,180,80,0.5)">$1</span><span style="color:rgba(255,180,80,0.8)">$2</span><span style="color:rgba(255,180,80,0.5)">$3</span>')
+
+        // Italic _text_
+        result = result.replace(/((?:^|[^\\]))(\_)(.*?[^\\])(\_)/g,
+            '$1<span style="color:rgba(180,130,255,0.5)">$2</span><span style="color:rgba(180,130,255,0.8)">$3</span><span style="color:rgba(180,130,255,0.5)">$4</span>')
+
+        // HTML tags
+        result = result.replace(/(&lt;)(\/?[a-zA-Z]\w*)(.*?)(&gt;)/g,
+            '<span style="color:rgba(200,120,120,0.5)">$1$2$3$4</span>')
+
+        return result
     }
 
     escapeHtml(str) {

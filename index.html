@@ -21,23 +21,59 @@
 <div class="container-fluid">
     <label for="editor">cm-md-editor</label>
     <textarea id="editor">
-# cm-md-editor
+# Heading 1
 
-This is a minimal **markdown editor** which is used in chessmail.de.
+## Heading 2
 
-## Key features
+### Heading 3
 
-- Vanilla JavaScript module, without dependencies
-- Supports outlines with tab and shift-tab to indent and outdent
-- Supports the **bold** syntax with command-b/ctrl-b
-- Supports the _italic_ syntax with command-i/ctrl-i
-- Supports undo and redo with command-z/ctrl-z and command-shift-z/ctrl-shift-z
-- It is…
-	- lightweight
-	- easy to use
-	- fast
+This is a minimal **markdown editor** with _italic_ and **_bold italic_** text. You can also use ~~strikethrough~~ for deleted text.
 
-☝️ [Check out the Demo page](https://shaack.com/projekte/cm-md-editor/)</textarea>
+Inline `code spans` are highlighted and protect their content: `**not bold**`.
+
+> Blockquotes are highlighted with a green prefix.
+
+### Links and images
+
+Visit [the demo page](https://shaack.com/projekte/cm-md-editor/) or use a [reference link][ref].
+
+![An example image](https://example.com/image.png)
+
+[ref]: https://shaack.com
+
+### Lists
+
+- Unordered list item
+- Another item
+	- Nested item
+	- Deeper nesting
+
+1. Ordered list item
+2. Second item
+
+### Task lists
+
+- [ ] Unchecked task
+- [x] Completed task
+
+### Code block
+
+```javascript
+const editor = new MdEditor(element)
+console.log("syntax highlighted")
+```
+
+### Horizontal rules
+
+---
+
+### Escape sequences
+
+Literal stars: \*not bold\* and backslash: \\
+
+### HTML tags
+
+This has <mark>inline HTML</mark> and a <br> tag.</textarea>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
