@@ -20,20 +20,22 @@ export class MdEditor {
         wrapper.insertBefore(toolbar, this.element)
         this.element.style.borderRadius = '0 0 4px 4px'
         const buttons = [
-            {title: 'Heading 1', icon: '<text x="12" y="17.5" font-size="16" font-family="system-ui,sans-serif" font-weight="700" text-anchor="middle">H1</text>', action: () => this.toggleHeading(1)},
-            {title: 'Heading 2', icon: '<text x="12" y="17.5" font-size="16" font-family="system-ui,sans-serif" font-weight="700" text-anchor="middle">H2</text>', action: () => this.toggleHeading(2)},
-            {title: 'Heading 3', icon: '<text x="12" y="17.5" font-size="16" font-family="system-ui,sans-serif" font-weight="700" text-anchor="middle">H3</text>', action: () => this.toggleHeading(3)},
-            {title: 'Bold', icon: '<text x="12" y="18" font-size="18" font-family="system-ui,sans-serif" font-weight="800" text-anchor="middle">B</text>', action: () => this.toggleBold()},
-            {title: 'Italic', icon: '<text x="12" y="18" font-size="18" font-family="system-ui,sans-serif" font-weight="600" font-style="italic" text-anchor="middle">I</text>', action: () => this.toggleItalic()},
-            {title: 'Unordered List', icon: '<circle cx="5" cy="7" r="1.8"/><circle cx="5" cy="17" r="1.8"/><rect x="9.5" y="5.5" width="11" height="3" rx="1"/><rect x="9.5" y="15.5" width="11" height="3" rx="1"/>', action: () => this.insertUnorderedList()},
-            {title: 'Ordered List', icon: '<text x="3" y="9.5" font-size="8.5" font-family="system-ui,sans-serif" font-weight="700">1</text><text x="3" y="19.5" font-size="8.5" font-family="system-ui,sans-serif" font-weight="700">2</text><rect x="9.5" y="5.5" width="11" height="3" rx="1"/><rect x="9.5" y="15.5" width="11" height="3" rx="1"/>', action: () => this.insertOrderedList()},
+            {title: 'Heading 1', icon: '<path d="M7.648 13V3H6.3v4.234H1.348V3H0v10h1.348V8.421H6.3V13zM14 13V3h-1.333l-2.381 1.766V6.12L12.6 4.443h.066V13z"/>', action: () => this.toggleHeading(1)},
+            {title: 'Heading 2', icon: '<path d="M7.495 13V3.201H6.174v4.15H1.32V3.2H0V13h1.32V8.513h4.854V13zm3.174-7.071v-.05c0-.934.66-1.752 1.801-1.752 1.005 0 1.76.639 1.76 1.651 0 .898-.582 1.58-1.12 2.19l-3.69 4.2V13h6.331v-1.149h-4.458v-.079L13.9 8.786c.919-1.048 1.666-1.874 1.666-3.101C15.565 4.149 14.35 3 12.499 3 10.46 3 9.384 4.393 9.384 5.879v.05z"/>', action: () => this.toggleHeading(2)},
+            {title: 'Heading 3', icon: '<path d="M11.07 8.4h1.049c1.174 0 1.99.69 2.004 1.724s-.802 1.786-2.068 1.779c-1.11-.007-1.905-.605-1.99-1.357h-1.21C8.926 11.91 10.116 13 12.028 13c1.99 0 3.439-1.188 3.404-2.87-.028-1.553-1.287-2.221-2.096-2.313v-.07c.724-.127 1.814-.935 1.772-2.293-.035-1.392-1.21-2.468-3.038-2.454-1.927.007-2.94 1.196-2.981 2.426h1.23c.064-.71.732-1.336 1.744-1.336 1.027 0 1.744.64 1.744 1.568.007.95-.738 1.639-1.744 1.639h-.991V8.4ZM7.495 13V3.201H6.174v4.15H1.32V3.2H0V13h1.32V8.513h4.854V13z"/>', action: () => this.toggleHeading(3)},
+            {title: 'Bold', icon: '<path d="M8.21 13c2.106 0 3.412-1.087 3.412-2.823 0-1.306-.984-2.283-2.324-2.386v-.055a2.176 2.176 0 0 0 1.852-2.14c0-1.51-1.162-2.46-3.014-2.46H3.843V13zM5.908 4.674h1.696c.963 0 1.517.451 1.517 1.244 0 .834-.629 1.32-1.73 1.32H5.908V4.673zm0 6.788V8.598h1.73c1.217 0 1.88.492 1.88 1.415 0 .943-.643 1.449-1.832 1.449H5.907z"/>', action: () => this.toggleBold()},
+            {title: 'Italic', icon: '<path d="M7.991 11.674 9.53 4.455c.123-.595.246-.71 1.347-.807l.11-.52H7.211l-.11.52c1.06.096 1.128.212 1.005.807L6.57 11.674c-.123.595-.246.71-1.346.806l-.11.52h3.774l.11-.52c-1.06-.095-1.129-.211-1.006-.806z"/>', action: () => this.toggleItalic()},
+            {title: 'Unordered List', icon: '<path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>', action: () => this.insertUnorderedList()},
+            {title: 'Ordered List', icon: '<path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5"/><path d="M1.713 11.865v-.474H2c.217 0 .363-.137.363-.317 0-.185-.158-.31-.361-.31-.223 0-.367.152-.373.31h-.59c.016-.467.373-.787.986-.787.588-.002.954.291.957.703a.595.595 0 0 1-.492.594v.033a.615.615 0 0 1 .569.631c.003.533-.502.8-1.051.8-.656 0-1-.37-1.008-.794h.582c.008.178.186.306.422.309.254 0 .424-.145.422-.35-.002-.195-.155-.348-.414-.348h-.3zm-.004-4.699h-.604v-.035c0-.408.295-.844.958-.844.583 0 .96.326.96.756 0 .389-.257.617-.476.848l-.537.572v.03h1.054V9H1.143v-.395l.957-.99c.138-.142.293-.304.293-.508 0-.18-.147-.32-.342-.32a.33.33 0 0 0-.342.338zM2.564 5h-.635V2.924h-.031l-.598.42v-.567l.629-.443h.635z"/>', action: () => this.insertOrderedList()},
+            {title: 'Insert Link', icon: '<path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/><path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>', action: () => this.insertLink()},
+            {title: 'Insert Image', icon: '<path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/><path d="M1.5 2A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2zm13 1a.5.5 0 0 1 .5.5v6l-3.775-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12v.54L1 12.5v-9a.5.5 0 0 1 .5-.5z"/>', action: () => this.insertImage()},
         ]
         buttons.forEach(btn => {
             const button = document.createElement('button')
             button.type = 'button'
             button.title = btn.title
             button.style.cssText = 'background:none;border:none;border-radius:3px;cursor:pointer;padding:4px 6px;display:flex;align-items:center;justify-content:center;color:inherit;opacity:0.6;transition:opacity 0.15s,background 0.15s;'
-            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">${btn.icon}</svg>`
+            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">${btn.icon}</svg>`
             button.addEventListener('mouseenter', () => { button.style.opacity = '1'; button.style.background = 'rgba(128,128,128,0.2)' })
             button.addEventListener('mouseleave', () => { button.style.opacity = '0.6'; button.style.background = 'none' })
             button.addEventListener('mousedown', (e) => {
@@ -57,7 +59,7 @@ export class MdEditor {
         this.wrapButton.type = 'button'
         this.wrapButton.title = 'Toggle word wrap'
         this.wrapButton.style.cssText = 'background:none;border:none;border-radius:3px;cursor:pointer;padding:4px 6px;display:flex;align-items:center;justify-content:center;color:inherit;opacity:0.6;transition:opacity 0.15s,background 0.15s;'
-        this.wrapButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 10h6v2H4zm0-5h16c0 0 0 0 0 0v0c0 2.2-1.8 4-4 4h-2l2-2h-1l-3 3 3 3h1l-2-2h2c3.3 0 6-2.7 6-6H4z"/></svg>`
+        this.wrapButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m0 4a.5.5 0 0 1 .5-.5h9a2.5 2.5 0 0 1 0 5h-1.293l.647.646a.5.5 0 0 1-.708.708l-1.5-1.5a.5.5 0 0 1 0-.708l1.5-1.5a.5.5 0 0 1 .708.708l-.647.646H11.5a1.5 1.5 0 0 0 0-3h-9a.5.5 0 0 1-.5-.5m0 4a.5.5 0 0 1 .5-.5H7a.5.5 0 0 1 0 1H2.5a.5.5 0 0 1-.5-.5"/></svg>`
         this.wrapButton.addEventListener('mouseenter', () => { this.wrapButton.style.opacity = '1'; this.wrapButton.style.background = 'rgba(128,128,128,0.2)' })
         this.wrapButton.addEventListener('mouseleave', () => { this.wrapButton.style.opacity = this.wrapEnabled ? '0.9' : '0.4'; this.wrapButton.style.background = 'none' })
         this.wrapButton.addEventListener('mousedown', (e) => e.preventDefault())
@@ -353,6 +355,34 @@ export class MdEditor {
         } else {
             this.insertTextAtCursor('1. ' + line)
         }
+    }
+
+    insertLink() {
+        const start = this.element.selectionStart
+        const end = this.element.selectionEnd
+        const selected = this.element.value.substring(start, end)
+        const url = prompt('Enter URL:')
+        if (url === null) return
+        const linkText = selected || 'link'
+        this.element.focus()
+        this.selectLineRange(start, end)
+        this.insertTextAtCursor('[' + linkText + '](' + url + ')')
+        this.element.selectionStart = start + 1
+        this.element.selectionEnd = start + 1 + linkText.length
+    }
+
+    insertImage() {
+        const start = this.element.selectionStart
+        const end = this.element.selectionEnd
+        const selected = this.element.value.substring(start, end)
+        const url = prompt('Enter image URL:')
+        if (url === null) return
+        const altText = selected || 'image'
+        this.element.focus()
+        this.selectLineRange(start, end)
+        this.insertTextAtCursor('![' + altText + '](' + url + ')')
+        this.element.selectionStart = start + 2
+        this.element.selectionEnd = start + 2 + altText.length
     }
 
     insertTextAtCursor(text) {
