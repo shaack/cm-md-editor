@@ -124,6 +124,7 @@ export class MdEditor {
         const lines = text.split('\n')
         let html = ''
         let inCodeBlock = false
+        let inHtmlComment = false
 
         for (let i = 0; i < lines.length; i++) {
             if (i > 0) html += '\n'
@@ -140,6 +141,31 @@ export class MdEditor {
                 continue
             }
 
+            // HTML comment handling (can span multiple lines)
+            if (inHtmlComment) {
+                const endIdx = line.indexOf('-->')
+                if (endIdx !== -1) {
+                    inHtmlComment = false
+                    html += '<span style="color:rgba(128,128,128,1)">' + this.escapeHtml(line.substring(0, endIdx + 3)) + '</span>'
+                    html += this.highlightInline(line.substring(endIdx + 3))
+                } else {
+                    html += '<span style="color:rgba(128,128,128,1)">' + this.escapeHtml(line) + '</span>'
+                }
+                continue
+            }
+            if (line.trimStart().startsWith('<!--')) {
+                const endIdx = line.indexOf('-->', line.indexOf('<!--') + 4)
+                if (endIdx !== -1) {
+                    // Single-line comment
+                    html += '<span style="color:rgba(128,128,128,1)">' + this.escapeHtml(line) + '</span>'
+                } else {
+                    // Multi-line comment starts
+                    inHtmlComment = true
+                    html += '<span style="color:rgba(128,128,128,1)">' + this.escapeHtml(line) + '</span>'
+                }
+                continue
+            }
+
             // Horizontal rule (3+ of same -, *, or _ with optional spaces)
             if (/^\s{0,3}([-*_])\s*(\1\s*){2,}$/.test(line)) {
                 html += '<span style="color:rgba(128,128,128,0.6)">' + this.escapeHtml(line) + '</span>'
@@ -149,7 +175,7 @@ export class MdEditor {
             // Headings
             const headingMatch = line.match(/^(#{1,6}) /)
             if (headingMatch) {
-                const opacity = Math.max(0.3, 0.8 - (headingMatch[1].length - 1) * 0.1)
+                const opacity = Math.max(0.3, 0.9 - (headingMatch[1].length - 1) * 0.2)
                 html += '<span style="color:rgba(100,160,255,' + opacity + ')">' + this.escapeHtml(line) + '</span>'
                 continue
             }
@@ -251,6 +277,11 @@ export class MdEditor {
         result = result.replace(/((?:^|[^\\]))(\_)(.*?[^\\])(\_)/g,
             '$1<span style="color:rgba(180,130,255,0.5)">$2</span><span style="color:rgba(180,130,255,0.8)">$3</span><span style="color:rgba(180,130,255,0.5)">$4</span>')
 
+        // HTML comments (inline)
+        /*
+        result = result.replace(/&lt;!--.*?--&gt;/g,
+            '<span style="color:rgba(255,128,128,0.1)">$&</span>')
+*/
         // HTML tags
         result = result.replace(/(&lt;)(\/?[a-zA-Z]\w*)(.*?)(&gt;)/g,
             '<span style="color:rgba(200,120,120,0.5)">$1$2$3$4</span>')
