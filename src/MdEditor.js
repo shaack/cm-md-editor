@@ -4,8 +4,25 @@
  */
 export class MdEditor {
 
-    constructor(element) {
+    constructor(element, props) {
         this.element = element
+        this.props = {
+            syntaxHighlight: 1, // opacity of the highlighting, set 0 to disable
+            colorHeading: "100,160,255",
+            colorCode: "130,170,200",
+            colorComment: "128,128,128",
+            colorLink: "100,180,220",
+            colorBlockquote: "100,200,150",
+            colorList: "100,200,150",
+            colorStrikethrough: "255,100,100",
+            colorBold: "255,180,80",
+            colorItalic: "180,130,255",
+            colorHtmlTag: "200,120,120",
+            colorHorizontalRule: "128,128,200",
+            colorEscape: "128,128,128",
+            colorFrontMatter: "128,128,200",
+            ...props
+        }
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
         this.createToolbar()
         this.createHighlightBackdrop()
@@ -72,6 +89,7 @@ export class MdEditor {
     }
 
     createHighlightBackdrop() {
+        if (!this.props.syntaxHighlight) return
         const container = this.element.parentNode
         container.style.position = 'relative'
         this.backdrop = document.createElement('div')
@@ -81,7 +99,7 @@ export class MdEditor {
 
         // Copy textarea computed styles to backdrop
         const cs = window.getComputedStyle(this.element)
-        this.backdrop.style.cssText = `position:absolute;overflow:hidden;pointer-events:none;z-index:1;`
+        this.backdrop.style.cssText = `position:absolute;overflow:hidden;pointer-events:none;z-index:1;opacity:${this.props.syntaxHighlight};`
         this.highlightLayer.style.cssText = `white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;color:transparent;`
 
         const syncStyles = () => {
@@ -119,25 +137,43 @@ export class MdEditor {
         this.updateHighlight()
     }
 
+    colorSpan(colorProp, content) {
+        return '<span style="color:rgba(' + this.props[colorProp] + ',1)">' + content + '</span>'
+    }
+
     updateHighlight() {
         const text = this.element.value
         const lines = text.split('\n')
         let html = ''
         let inCodeBlock = false
         let inHtmlComment = false
+        let inFrontMatter = false
+        // YAML front matter must start at the very first line
+        if (lines.length > 0 && lines[0].trim() === '---') {
+            inFrontMatter = true
+        }
 
         for (let i = 0; i < lines.length; i++) {
             if (i > 0) html += '\n'
             const line = lines[i]
 
+            // YAML front matter
+            if (inFrontMatter) {
+                html += this.colorSpan('colorFrontMatter', this.escapeHtml(line))
+                if (i > 0 && line.trim() === '---') {
+                    inFrontMatter = false
+                }
+                continue
+            }
+
             // Fenced code block delimiter
             if (/^`{3,}/.test(line)) {
                 inCodeBlock = !inCodeBlock
-                html += '<span style="color:rgba(130,170,200,0.7)">' + this.escapeHtml(line) + '</span>'
+                html += this.colorSpan('colorCode', this.escapeHtml(line))
                 continue
             }
             if (inCodeBlock) {
-                html += '<span style="color:rgba(130,170,200,0.5)">' + this.escapeHtml(line) + '</span>'
+                html += this.colorSpan('colorCode', this.escapeHtml(line))
                 continue
             }
 
@@ -146,10 +182,10 @@ export class MdEditor {
                 const endIdx = line.indexOf('-->')
                 if (endIdx !== -1) {
                     inHtmlComment = false
-                    html += '<span style="color:rgba(128,128,128,1)">' + this.escapeHtml(line.substring(0, endIdx + 3)) + '</span>'
+                    html += this.colorSpan('colorComment', this.escapeHtml(line.substring(0, endIdx + 3)))
                     html += this.highlightInline(line.substring(endIdx + 3))
                 } else {
-                    html += '<span style="color:rgba(128,128,128,1)">' + this.escapeHtml(line) + '</span>'
+                    html += this.colorSpan('colorComment', this.escapeHtml(line))
                 }
                 continue
             }
@@ -157,36 +193,36 @@ export class MdEditor {
                 const endIdx = line.indexOf('-->', line.indexOf('<!--') + 4)
                 if (endIdx !== -1) {
                     // Single-line comment
-                    html += '<span style="color:rgba(128,128,128,1)">' + this.escapeHtml(line) + '</span>'
+                    html += this.colorSpan('colorComment', this.escapeHtml(line))
                 } else {
                     // Multi-line comment starts
                     inHtmlComment = true
-                    html += '<span style="color:rgba(128,128,128,1)">' + this.escapeHtml(line) + '</span>'
+                    html += this.colorSpan('colorComment', this.escapeHtml(line))
                 }
                 continue
             }
 
             // Horizontal rule (3+ of same -, *, or _ with optional spaces)
             if (/^\s{0,3}([-*_])\s*(\1\s*){2,}$/.test(line)) {
-                html += '<span style="color:rgba(128,128,128,0.6)">' + this.escapeHtml(line) + '</span>'
+                html += this.colorSpan('colorHorizontalRule', this.escapeHtml(line))
                 continue
             }
 
             // Headings
             const headingMatch = line.match(/^(#{1,6}) /)
             if (headingMatch) {
-                const opacity = Math.max(0.3, 0.9 - (headingMatch[1].length - 1) * 0.2)
-                html += '<span style="color:rgba(100,160,255,' + opacity + ')">' + this.escapeHtml(line) + '</span>'
+                const opacity = Math.max(0.3, 1 - (headingMatch[1].length - 1) * 0.1)
+                html += '<span style="color:rgba(' + this.props.colorHeading + ',' + opacity + ')">' + this.escapeHtml(line) + '</span>'
                 continue
             }
 
             // Reference link definition [ref]: url
             const refMatch = line.match(/^(\s{0,3}\[)([^\]]+)(\]:\s+)(.+)$/)
             if (refMatch) {
-                html += '<span style="color:rgba(100,180,220,0.5)">' + this.escapeHtml(refMatch[1]) + '</span>'
-                    + '<span style="color:rgba(100,180,220,0.8)">' + this.escapeHtml(refMatch[2]) + '</span>'
-                    + '<span style="color:rgba(100,180,220,0.5)">' + this.escapeHtml(refMatch[3]) + '</span>'
-                    + '<span style="color:rgba(100,180,220,0.6)">' + this.escapeHtml(refMatch[4]) + '</span>'
+                html += this.colorSpan('colorLink', this.escapeHtml(refMatch[1]))
+                    + this.colorSpan('colorLink', this.escapeHtml(refMatch[2]))
+                    + this.colorSpan('colorLink', this.escapeHtml(refMatch[3]))
+                    + this.colorSpan('colorLink', this.escapeHtml(refMatch[4]))
                 continue
             }
 
@@ -195,7 +231,7 @@ export class MdEditor {
             let rest = line
             const bqMatch = line.match(/^(\s*>+\s?)/)
             if (bqMatch) {
-                prefix = '<span style="color:rgba(128,180,128,0.7)">' + this.escapeHtml(bqMatch[0]) + '</span>'
+                prefix = this.colorSpan('colorBlockquote', this.escapeHtml(bqMatch[0]))
                 rest = line.substring(bqMatch[0].length)
             }
 
@@ -229,7 +265,7 @@ export class MdEditor {
         let result = ''
         for (const seg of segments) {
             if (seg.type === 'code') {
-                result += '<span style="color:rgba(130,170,200,0.7)">' + this.escapeHtml(seg.content) + '</span>'
+                result += this.colorSpan('colorCode', this.escapeHtml(seg.content))
             } else {
                 result += this.highlightTextSegment(this.escapeHtml(seg.content))
             }
@@ -239,52 +275,48 @@ export class MdEditor {
 
     highlightTextSegment(escaped) {
         let result = escaped
+        const c = (prop) => this.props[prop]
 
         // Escape sequences: dim the backslash before markdown punctuation
         result = result.replace(/\\([\\`*_{}[\]()#+\-.!~|])/g,
-            '<span style="color:rgba(128,128,128,0.4)">\\</span>$1')
+            '<span style="color:rgba(' + c('colorEscape') + ',1)">\\</span>$1')
 
         // Unordered list markers with optional task list checkbox
         result = result.replace(/^(\t*)(- )(\[[ xX]\] )?/, (_, tabs, marker, task) => {
-            let r = tabs + '<span style="color:rgba(100,200,150,0.7)">' + marker + '</span>'
+            let r = tabs + this.colorSpan('colorList', marker)
             if (task) {
-                r += '<span style="color:rgba(100,200,150,0.7)">' + task + '</span>'
+                r += this.colorSpan('colorList', task)
             }
             return r
         })
 
         // Ordered list markers
         result = result.replace(/^(\t*)(\d+\. )/, (_, tabs, marker) =>
-            tabs + '<span style="color:rgba(100,200,150,0.7)">' + marker + '</span>')
+            tabs + this.colorSpan('colorList', marker))
 
         // Images ![alt](url) and Links [text](url)
-        result = result.replace(/(!?\[)(.*?)(\]\()(.+?)(\))/g,
-            '<span style="color:rgba(100,180,220,0.5)">$1</span><span style="color:rgba(100,180,220,0.8)">$2</span><span style="color:rgba(100,180,220,0.5)">$3</span><span style="color:rgba(100,180,220,0.6)">$4</span><span style="color:rgba(100,180,220,0.5)">$5</span>')
+        result = result.replace(/(!?\[)(.*?)(\]\()(.+?)(\))/g, (_, p1, p2, p3, p4, p5) =>
+            this.colorSpan('colorLink', p1) + this.colorSpan('colorLink', p2) + this.colorSpan('colorLink', p3) + this.colorSpan('colorLink', p4) + this.colorSpan('colorLink', p5))
 
         // Reference links [text][ref]
-        result = result.replace(/(\[)(.*?)(\]\[)(.*?)(\])/g,
-            '<span style="color:rgba(100,180,220,0.5)">$1</span><span style="color:rgba(100,180,220,0.8)">$2</span><span style="color:rgba(100,180,220,0.5)">$3</span><span style="color:rgba(100,180,220,0.6)">$4</span><span style="color:rgba(100,180,220,0.5)">$5</span>')
+        result = result.replace(/(\[)(.*?)(\]\[)(.*?)(\])/g, (_, p1, p2, p3, p4, p5) =>
+            this.colorSpan('colorLink', p1) + this.colorSpan('colorLink', p2) + this.colorSpan('colorLink', p3) + this.colorSpan('colorLink', p4) + this.colorSpan('colorLink', p5))
 
         // Strikethrough ~~text~~
-        result = result.replace(/(~~)(.*?)(~~)/g,
-            '<span style="color:rgba(255,100,100,0.5)">$1</span><span style="color:rgba(255,100,100,0.7)">$2</span><span style="color:rgba(255,100,100,0.5)">$3</span>')
+        result = result.replace(/(~~)(.*?)(~~)/g, (_, p1, p2, p3) =>
+            this.colorSpan('colorStrikethrough', p1) + this.colorSpan('colorStrikethrough', p2) + this.colorSpan('colorStrikethrough', p3))
 
         // Bold **text**
-        result = result.replace(/(\*\*)(.*?)(\*\*)/g,
-            '<span style="color:rgba(255,180,80,0.5)">$1</span><span style="color:rgba(255,180,80,0.8)">$2</span><span style="color:rgba(255,180,80,0.5)">$3</span>')
+        result = result.replace(/(\*\*)(.*?)(\*\*)/g, (_, p1, p2, p3) =>
+            this.colorSpan('colorBold', p1) + this.colorSpan('colorBold', p2) + this.colorSpan('colorBold', p3))
 
         // Italic _text_
-        result = result.replace(/((?:^|[^\\]))(\_)(.*?[^\\])(\_)/g,
-            '$1<span style="color:rgba(180,130,255,0.5)">$2</span><span style="color:rgba(180,130,255,0.8)">$3</span><span style="color:rgba(180,130,255,0.5)">$4</span>')
+        result = result.replace(/((?:^|[^\\]))(\_)(.*?[^\\])(\_)/g, (_, pre, p1, p2, p3) =>
+            pre + this.colorSpan('colorItalic', p1) + this.colorSpan('colorItalic', p2) + this.colorSpan('colorItalic', p3))
 
-        // HTML comments (inline)
-        /*
-        result = result.replace(/&lt;!--.*?--&gt;/g,
-            '<span style="color:rgba(255,128,128,0.1)">$&</span>')
-*/
         // HTML tags
-        result = result.replace(/(&lt;)(\/?[a-zA-Z]\w*)(.*?)(&gt;)/g,
-            '<span style="color:rgba(200,120,120,0.5)">$1$2$3$4</span>')
+        result = result.replace(/(&lt;)(\/?[a-zA-Z]\w*)(.*?)(&gt;)/g, (_, p1, p2, p3, p4) =>
+            this.colorSpan('colorHtmlTag', p1 + p2 + p3 + p4))
 
         return result
     }
