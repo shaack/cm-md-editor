@@ -315,8 +315,10 @@ export class MdEditor {
         result = result.replace(/(\*\*)(.*?)(\*\*)/g, (_, p1, p2, p3) =>
             this.colorSpan('colorBold', p1) + this.colorSpan('colorBold', p2) + this.colorSpan('colorBold', p3))
 
-        // Italic _text_
-        result = result.replace(/((?:^|[^\\]))(\_)(.*?[^\\])(\_)/g, (_, pre, p1, p2, p3) =>
+        // Italic _text_ or *text* (single asterisk, after bold has been handled)
+        result = result.replace(/((?:^|[^\\*]))(\_)(.*?[^\\])(\_)/g, (_, pre, p1, p2, p3) =>
+            pre + this.colorSpan('colorItalic', p1) + this.colorSpan('colorItalic', p2) + this.colorSpan('colorItalic', p3))
+        result = result.replace(/((?:^|[^\\*]))(\*)((?!\*).+?[^\\])(\*)/g, (_, pre, p1, p2, p3) =>
             pre + this.colorSpan('colorItalic', p1) + this.colorSpan('colorItalic', p2) + this.colorSpan('colorItalic', p3))
 
         // HTML tags
