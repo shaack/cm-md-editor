@@ -121,7 +121,10 @@ export class MdEditor {
         }
         syncStyles()
 
-        // Make textarea background transparent so backdrop shows through
+        // Move textarea bg to container, make textarea transparent so backdrop shows through
+        const originalBg = cs.getPropertyValue('background-color')
+        container.style.background = originalBg
+        container.style.borderRadius = cs.getPropertyValue('border-radius')
         this.element.style.overscrollBehavior = 'none'
         this.element.style.background = 'transparent'
         this.element.style.position = 'relative'
