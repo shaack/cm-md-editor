@@ -290,7 +290,7 @@ export class MdEditor {
             '<span style="color:rgba(' + c('colorEscape') + ',1)">\\</span>$1')
 
         // Unordered list markers with optional task list checkbox
-        result = result.replace(/^(\t*)(- )(\[[ xX]\] )?/, (_, tabs, marker, task) => {
+        result = result.replace(/^((?:\t|  )*)(- )(\[[ xX]\] )?/, (_, tabs, marker, task) => {
             let r = tabs + this.colorSpan('colorList', marker)
             if (task) {
                 r += this.colorSpan('colorList', task)
@@ -299,7 +299,7 @@ export class MdEditor {
         })
 
         // Ordered list markers
-        result = result.replace(/^(\t*)(\d+\. )/, (_, tabs, marker) =>
+        result = result.replace(/^((?:\t|  )*)(\d+\. )/, (_, tabs, marker) =>
             tabs + this.colorSpan('colorList', marker))
 
         // Images ![alt](url) and Links [text](url)
