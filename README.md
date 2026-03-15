@@ -2,6 +2,8 @@
 
 A minimal, dependency-free markdown editor as a vanilla JavaScript ES6 module.
 
+[Demo](https://shaack.com/projekte/cm-md-editor/)
+
 ![Screenshot](screenshot.png)
 
 ## Key features
