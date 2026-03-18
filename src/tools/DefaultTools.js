@@ -1,21 +1,13 @@
-export {Heading1} from "./Heading1.js"
-export {Heading2} from "./Heading2.js"
-export {Heading3} from "./Heading3.js"
-export {Bold} from "./Bold.js"
-export {Italic} from "./Italic.js"
-export {UnorderedList} from "./UnorderedList.js"
-export {OrderedList} from "./OrderedList.js"
-export {InsertLink} from "./InsertLink.js"
-export {InsertImage} from "./InsertImage.js"
-
 import {Heading1} from "./Heading1.js"
 import {Heading2} from "./Heading2.js"
 import {Heading3} from "./Heading3.js"
 import {Bold} from "./Bold.js"
 import {Italic} from "./Italic.js"
+import {Strikethrough} from "./Strikethrough.js"
 import {UnorderedList} from "./UnorderedList.js"
 import {OrderedList} from "./OrderedList.js"
 import {InsertLink} from "./InsertLink.js"
 import {InsertImage} from "./InsertImage.js"
+import {Separator} from "./Separator.js"
 
-export const defaultTools = [Heading1, Heading2, Heading3, Bold, Italic, UnorderedList, OrderedList, InsertLink, InsertImage]
+export const defaultTools = [Heading1, Heading2, Heading3, Bold, Italic, Strikethrough, Separator, UnorderedList, OrderedList, Separator, InsertLink, InsertImage]
