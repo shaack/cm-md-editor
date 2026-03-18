@@ -9,11 +9,11 @@ A minimal, dependency-free markdown editor as a vanilla JavaScript ES6 module.
 ## Key features
 
 - Vanilla JavaScript module, zero dependencies
-- Syntax highlighting for headings, bold, italic, code, lists, links, images, blockquotes, HTML tags, horizontal rules, front matter and more
-- Toolbar with configurable buttons (headings, bold, italic, lists, links, images)
+- Syntax highlighting for headings, bold, italic, strikethrough, code, lists, links, images, blockquotes, HTML tags, horizontal rules, front matter and more
+- Modular toolbar built from composable tools
 - Word wrap toggle with persistent state (localStorage)
 - List mode: Tab/Shift-Tab to indent/outdent, auto-continuation on Enter
-- Bold with Ctrl/Cmd+B, italic with Ctrl/Cmd+I
+- Bold with Ctrl/Cmd+B, italic with Ctrl/Cmd+I (provided by tools)
 - Native undo/redo support (Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z)
 - Lightweight, fast, easy to use
 
@@ -35,12 +35,32 @@ npm install cm-md-editor
 </script>
 ```
 
-With custom configuration:
+This creates an editor with the default toolbar: Headings (h1–h3), Bold, Italic, Strikethrough, Unordered List, Ordered List, Insert Link, Insert Image.
+
+### Custom toolbar
+
+Compose your own toolbar by passing a `tools` array:
 
 ```javascript
-const editor = new MdEditor(document.getElementById("editor"), {
-    wordWrap: false,
-    toolbarButtons: ["h1", "h2", "bold", "italic", "ul", "link"]
+import {MdEditor} from "cm-md-editor/src/MdEditor.js"
+import {Headings} from "cm-md-editor/src/tools/Headings.js"
+import {Bold} from "cm-md-editor/src/tools/Bold.js"
+import {Italic} from "cm-md-editor/src/tools/Italic.js"
+import {Separator} from "cm-md-editor/src/tools/Separator.js"
+import {InsertLink} from "cm-md-editor/src/tools/InsertLink.js"
+
+new MdEditor(document.getElementById("editor"), {
+    tools: [Headings, Separator, Bold, Italic, Separator, InsertLink]
+})
+```
+
+### Configuring tools
+
+Tools that accept options can be passed as `[ToolClass, props]` tuples:
+
+```javascript
+new MdEditor(document.getElementById("editor"), {
+    tools: [[Headings, {minLevel: 2, maxLevel: 4}], Bold, Italic]
 })
 ```
 
@@ -50,9 +70,8 @@ All props are optional. Pass them as the second argument to the constructor.
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
+| `tools` | `array` | `defaultTools` | Array of tool classes (or `[class, props]` tuples). See [Tools](#tools) |
 | `wordWrap` | `boolean` | `true` | Default word wrap state. Overridden by localStorage if the user has toggled it |
-| `toolbarButtons` | `string[]` | `["h1", "h2", "h3", "bold", "italic", "ul", "ol", "link", "image"]` | Which toolbar buttons to show. Available: `h1`, `h2`, `h3`, `bold`, `italic`, `ul`, `ol`, `link`, `image` |
-| `addOns` | `class[]` | `[]` | AddOn classes to instantiate. See [AddOns](#addons) |
 | `colorHeading` | `string` | `"100,160,255"` | RGB color for headings |
 | `colorCode` | `string` | `"130,170,200"` | RGB color for code spans and fenced code blocks |
 | `colorComment` | `string` | `"128,128,128"` | RGB color for HTML comments |
@@ -69,36 +88,55 @@ All props are optional. Pass them as the second argument to the constructor.
 
 Colors are specified as RGB strings (e.g. `"255,180,80"`) and rendered at full opacity.
 
-## AddOns
+## Tools
 
-AddOns extend the editor with custom toolbar buttons, keyboard shortcuts, and syntax highlighting. They keep the core editor generic while allowing app-specific functionality.
+The toolbar is built entirely from tools. Each tool is a class that provides toolbar buttons, keyboard shortcuts, and/or syntax highlighting extensions.
 
-### Usage
+### Built-in tools
 
-Pass AddOn classes via the `addOns` prop. The editor instantiates each with `new AddOn(editor)`.
+| Tool | Buttons | Shortcut | Description |
+|------|---------|----------|-------------|
+| `Headings` | h1, h2, h3 | — | Toggle heading levels. Props: `{minLevel, maxLevel}` (defaults: 1–3) |
+| `Bold` | bold | Ctrl/Cmd+B | Toggle bold (`**`) |
+| `Italic` | italic | Ctrl/Cmd+I | Toggle italic (`_`) |
+| `Strikethrough` | strikethrough | — | Toggle strikethrough (`~~`) |
+| `UnorderedList` | ul | — | Toggle unordered list prefix (`- `) |
+| `OrderedList` | ol | — | Toggle ordered list prefix (`1. `) |
+| `InsertLink` | link | — | Insert markdown link |
+| `InsertImage` | image | — | Insert markdown image |
+| `Separator` | — | — | Visual divider in the toolbar. Can be used multiple times |
+
+All built-in tools are exported from `src/tools/DefaultTools.js`:
 
 ```javascript
-const editor = new MdEditor(document.getElementById("editor"), {
-    addOns: [GameAddOn, MyOtherAddOn]
-})
+import {defaultTools} from "cm-md-editor/src/tools/DefaultTools.js"
 ```
 
-### Writing an AddOn
+The default toolbar order is:
 
-An AddOn is a class that receives the editor instance in its constructor. It can implement any combination of three optional methods:
+```
+Headings | Bold, Italic, Strikethrough | UnorderedList, OrderedList | InsertLink, InsertImage
+```
+
+### Writing a custom tool
+
+A tool is a class that receives the editor instance (and optional props) in its constructor. It can implement any combination of three optional methods:
 
 ```javascript
-class MyAddOn {
-    constructor(editor) {
+export class MyTool {
+    constructor(editor, props = {}) {
         this.editor = editor
     }
 
     // Optional: add buttons to the toolbar
     toolbarButtons() {
         return [{
-            name: 'mybutton',
-            title: 'My Button',
-            icon: '<path d="..."/>',  // SVG path content for a 16x16 viewBox
+            name: 'mytool',
+            title: 'My Tool',
+            // Icon options (use one):
+            icon: '<path d="..."/>',       // inline SVG path for a 16x16 viewBox
+            iconFile: 'my-icon.svg',       // filename in src/tools/icons/
+            iconUrl: 'https://...',        // full URL to an SVG file
             action: () => { /* ... */ }
         }]
     }
@@ -114,13 +152,25 @@ class MyAddOn {
 
     // Optional: extend syntax highlighting (receives already-escaped HTML)
     highlightInline(html) {
-        return html.replace(/(\[game id=&amp;quot;)(.*?)(&amp;quot;\])/g, (_, p1, p2, p3) =>
-            this.editor.colorSpan('colorLink', p1 + p2 + p3))
+        return html.replace(...)
     }
 }
 ```
 
-### Editor API available to AddOns
+For tools with co-located icons, use `import.meta.url` to resolve the icon path:
+
+```javascript
+toolbarButtons() {
+    return [{
+        name: 'mytool',
+        title: 'My Tool',
+        iconUrl: new URL("my-icon.svg", import.meta.url).href,
+        action: () => { /* ... */ }
+    }]
+}
+```
+
+### Editor API available to tools
 
 These public methods and properties are available via `this.editor`:
 
@@ -134,54 +184,30 @@ These public methods and properties are available via `this.editor`:
 | `editor.escapeHtml(str)` | Escape a string for use in the highlight layer |
 | `editor.colorSpan(colorProp, content)` | Wrap content in a colored `<span>` using an RGB color prop |
 
-### Example: GameAddOn
+### Example: DummyText tool
 
-A complete AddOn that adds a toolbar button, a Ctrl+E shortcut, and syntax highlighting for `[game id="..."]` shortcodes:
+A tool that inserts lorem ipsum text (see `example-addon-tools/DummyText.js`):
 
 ```javascript
-class GameAddOn {
-    constructor(editor) {
-        this.editor = editor
-    }
+import {MdEditor} from "cm-md-editor/src/MdEditor.js"
+import {defaultTools} from "cm-md-editor/src/tools/DefaultTools.js"
+import {Separator} from "cm-md-editor/src/tools/Separator.js"
+import {DummyText} from "./example-addon-tools/DummyText.js"
 
-    toolbarButtons() {
-        return [{
-            name: 'game',
-            title: 'Insert Game (Ctrl+E)',
-            icon: '<path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219z"/>',
-            action: () => this.insertGame()
-        }]
-    }
-
-    keyboardShortcuts() {
-        return [{key: 'e', ctrlOrMeta: true, action: () => this.insertGame()}]
-    }
-
-    highlightInline(html) {
-        return html.replace(/(\[game id=&amp;quot;)(.*?)(&amp;quot;\])/g, (_, p1, p2, p3) =>
-            this.editor.colorSpan('colorLink', p1 + p2 + p3))
-    }
-
-    insertGame() {
-        const el = this.editor.element
-        const start = el.selectionStart
-        const selected = el.value.substring(start, el.selectionEnd)
-        this.editor.insertTextAtCursor('[game id="' + selected + '"]')
-        el.selectionStart = start + 10
-        el.selectionEnd = start + 10 + selected.length
-    }
-}
+new MdEditor(document.getElementById("editor"), {
+    tools: [...defaultTools, Separator, DummyText]
+})
 ```
 
 ## Keyboard shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| Ctrl/Cmd + B | Toggle bold |
-| Ctrl/Cmd + I | Toggle italic |
-| Tab | Indent list item or insert tab |
-| Shift + Tab | Outdent list item |
-| Enter | Auto-continue list (unordered and ordered) |
+| Shortcut | Action | Provided by |
+|----------|--------|-------------|
+| Ctrl/Cmd + B | Toggle bold | `Bold` tool |
+| Ctrl/Cmd + I | Toggle italic | `Italic` tool |
+| Tab | Indent list item or insert tab | Core editor |
+| Shift + Tab | Outdent list item | Core editor |
+| Enter | Auto-continue list (unordered and ordered) | Core editor |
 
 ## License
 
