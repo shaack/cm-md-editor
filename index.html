@@ -93,8 +93,12 @@ This has <mark>inline HTML</mark> and a <br> tag.</textarea>
         crossorigin="anonymous"></script>
 <script type="module">
     import {MdEditor} from "./src/MdEditor.js"
+    import {defaultTools} from "./src/tools/DefaultTools.js"
+    import {DummyText} from "./src/tools/dummy-text/DummyText.js"
 
-    new MdEditor(document.getElementById('editor'))
+    new MdEditor(document.getElementById('editor'), {
+        tools: [...defaultTools, DummyText]
+    })
 </script>
 </body>
 </html>
