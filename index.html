@@ -94,10 +94,11 @@ This has <mark>inline HTML</mark> and a <br> tag.</textarea>
 <script type="module">
     import {MdEditor} from "./src/MdEditor.js"
     import {defaultTools} from "./src/tools/DefaultTools.js"
+    import {Separator} from "./src/tools/Separator.js"
     import {DummyText} from "./src/tools/dummy-text/DummyText.js"
 
     new MdEditor(document.getElementById('editor'), {
-        tools: [...defaultTools, DummyText]
+        tools: [...defaultTools, Separator, DummyText]
     })
 </script>
 </body>

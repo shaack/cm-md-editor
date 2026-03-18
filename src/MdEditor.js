@@ -83,6 +83,12 @@ export class MdEditor {
     }
 
     createToolbarButton(toolbar, btn) {
+        if (btn.separator) {
+            const sep = document.createElement('div')
+            sep.style.cssText = 'width:1px;align-self:stretch;margin:3px 5px;background:rgba(128,128,128,0.4);'
+            toolbar.appendChild(sep)
+            return
+        }
         const button = document.createElement('button')
         button.type = 'button'
         button.title = btn.title
