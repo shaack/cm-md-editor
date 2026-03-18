@@ -26,7 +26,13 @@ export class MdEditor {
             tools: defaultTools,
             ...props
         }
-        this.tools = this.props.tools.map(Tool => new Tool(this))
+        this.tools = this.props.tools.map(entry => {
+            if (Array.isArray(entry)) {
+                const [Tool, toolProps] = entry
+                return new Tool(this, toolProps)
+            }
+            return new entry(this)
+        })
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
         this.createToolbar()
         this.createHighlightBackdrop()
@@ -115,7 +121,7 @@ export class MdEditor {
     }
 
     loadIcon(filename) {
-        const baseUrl = new URL('../assets/icons/', import.meta.url)
+        const baseUrl = new URL('./tools/icons/', import.meta.url)
         return this.loadIconFromUrl(new URL(filename, baseUrl).href)
     }
 
