@@ -23,6 +23,7 @@ export class MdEditor {
             colorEscape: "128,128,128",
             colorFrontMatter: "128,128,200",
             wordWrap: true,
+            iconsPath: new URL('./tools/icons/', import.meta.url).href,
             tools: defaultTools,
             ...props
         }
@@ -121,8 +122,7 @@ export class MdEditor {
     }
 
     loadIcon(filename) {
-        const baseUrl = new URL('./tools/icons/', import.meta.url)
-        return this.loadIconFromUrl(new URL(filename, baseUrl).href)
+        return this.loadIconFromUrl(new URL(filename, this.props.iconsPath).href)
     }
 
     loadIconFromUrl(url) {
