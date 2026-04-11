@@ -440,6 +440,7 @@ export class MdEditor {
 
     insertTextAtCursor(text) {
         // execCommand is deprecated, but without alternative to insert text and preserve the correct undo/redo stack
+        this.element.focus()
         document.execCommand("insertText", false, text)
     }
 
