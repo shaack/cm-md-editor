@@ -122,7 +122,10 @@ export class MdEditor {
     }
 
     loadIcon(filename) {
-        return this.loadIconFromUrl(new URL(filename, this.props.iconsPath).href)
+        const base = this.props.iconsPath.startsWith('http')
+            ? this.props.iconsPath
+            : new URL(this.props.iconsPath, window.location.href).href
+        return this.loadIconFromUrl(new URL(filename, base).href)
     }
 
     loadIconFromUrl(url) {
