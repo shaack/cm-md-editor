@@ -99,6 +99,10 @@ export class MdEditor {
         const button = document.createElement('button')
         button.type = 'button'
         button.title = btn.title
+        if (btn.name) {
+            button.dataset.name = btn.name
+            button.classList.add('mde-btn-' + btn.name)
+        }
         button.style.cssText = 'background:none;border:none;border-radius:3px;cursor:pointer;padding:4px 6px;display:flex;align-items:center;justify-content:center;color:inherit;opacity:0.6;transition:opacity 0.15s,background 0.15s;'
         if (btn.icon) {
             button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">${btn.icon}</svg>`
