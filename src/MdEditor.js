@@ -451,6 +451,23 @@ export class MdEditor {
         const before = this.element.value.substring(0, this.element.selectionStart)
         const currentLine = before.substring(before.lastIndexOf('\n') + 1)
         const isListMode = currentLine.match(/^\t*- /) || currentLine.match(/^\t*\d+\. /)
+        // Route undo/redo to the native undo manager (issue #2). Safari stops firing
+        // its native Cmd-Z undo on a textarea once it has been edited via execCommand,
+        // but document.execCommand("undo"/"redo") still drives the same stack reliably.
+        // Cmd-Z / Cmd-Shift-Z (macOS) and Ctrl-Z / Ctrl-Y (Windows/Linux).
+        const undoKey = e.key.toLowerCase()
+        if ((e.ctrlKey || e.metaKey) && (undoKey === 'z' || undoKey === 'y')) {
+            // Swallow the event fully — otherwise Safari sometimes performs odd
+            // browser-tab actions when the stack is empty and the command fails.
+            e.preventDefault()
+            e.stopPropagation()
+            const command = (undoKey === 'y' || e.shiftKey) ? 'redo' : 'undo'
+            // Only run the command when the stack actually has something to do.
+            if (document.queryCommandEnabled(command)) {
+                document.execCommand(command)
+            }
+            return
+        }
         if (e.key === 'Tab') {
             e.preventDefault()
             if (isListMode) {
