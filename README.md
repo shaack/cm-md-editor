@@ -72,6 +72,7 @@ All props are optional. Pass them as the second argument to the constructor.
 |------|------|---------|-------------|
 | `tools` | `array` | `defaultTools` | Array of tool classes (or `[class, props]` tuples). See [Tools](#tools) |
 | `wordWrap` | `boolean` | `true` | Default word wrap state. Overridden by localStorage if the user has toggled it |
+| `listIndent` | `string` | `"  "` (two spaces) | One level of list indentation, inserted/removed with Tab/Shift-Tab on a list line. Tabs and two-space levels are still accepted when reading existing text |
 | `colorHeading` | `string` | `"100,160,255"` | RGB color for headings |
 | `colorCode` | `string` | `"130,170,200"` | RGB color for code spans and fenced code blocks |
 | `colorComment` | `string` | `"128,128,128"` | RGB color for HTML comments |
