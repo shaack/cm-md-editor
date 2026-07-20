@@ -471,8 +471,16 @@ export class MdEditor {
     }
 
     handleKeyDown(e) {
-        const before = this.element.value.substring(0, this.element.selectionStart)
-        const currentLine = before.substring(before.lastIndexOf('\n') + 1)
+        // Look at the whole current line, not only the part before the cursor, so a list line
+        // is recognised even when the cursor sits at its very start (Tab must indent there too).
+        const value = this.element.value
+        const start = this.element.selectionStart
+        const lineStart = value.lastIndexOf('\n', start - 1) + 1
+        let lineEnd = value.indexOf('\n', start)
+        if (lineEnd < 0) {
+            lineEnd = value.length
+        }
+        const currentLine = value.substring(lineStart, lineEnd)
         const isListMode = currentLine.match(/^(?:\t|  )*- /) || currentLine.match(/^(?:\t|  )*\d+\. /)
         // Route undo/redo to the native undo manager (issue #2). Safari stops firing
         // its native Cmd-Z undo on a textarea once it has been edited via execCommand,
