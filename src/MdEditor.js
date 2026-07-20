@@ -6,13 +6,15 @@ import {defaultTools} from "./tools/DefaultTools.js"
 
 export class MdEditor {
 
-    // One level of list indentation. Markdown nests a "- " item by two columns, so two
+    // Default unit of list indentation. Markdown nests a "- " item by two columns, so two
     // spaces is the canonical unit; a tab is still accepted when reading existing text.
+    // Configurable per instance through the listIndent prop.
     static LIST_INDENT = '  '
 
     constructor(element, props) {
         this.element = element
         this.props = {
+            listIndent: MdEditor.LIST_INDENT,
             colorHeading: "100,160,255",
             colorCode: "130,170,200",
             colorComment: "128,128,128",
@@ -344,7 +346,7 @@ export class MdEditor {
             '<span style="color:rgba(' + c('colorEscape') + ',1)">\\</span>$1')
 
         // Unordered list markers with optional task list checkbox
-        result = result.replace(/^((?:\t|  )*)(- )(\[[ xX]\] )?/, (_, tabs, marker, task) => {
+        result = result.replace(/^([\t ]*)(- )(\[[ xX]\] )?/, (_, tabs, marker, task) => {
             let r = tabs + this.colorSpan('colorList', marker)
             if (task) {
                 r += this.colorSpan('colorList', task)
@@ -353,7 +355,7 @@ export class MdEditor {
         })
 
         // Ordered list markers
-        result = result.replace(/^((?:\t|  )*)(\d+\. )/, (_, tabs, marker) =>
+        result = result.replace(/^([\t ]*)(\d+\. )/, (_, tabs, marker) =>
             tabs + this.colorSpan('colorList', marker))
 
         // Images ![alt](url) and Links [text](url)
@@ -481,7 +483,7 @@ export class MdEditor {
             lineEnd = value.length
         }
         const currentLine = value.substring(lineStart, lineEnd)
-        const isListMode = currentLine.match(/^(?:\t|  )*- /) || currentLine.match(/^(?:\t|  )*\d+\. /)
+        const isListMode = currentLine.match(/^[\t ]*- /) || currentLine.match(/^[\t ]*\d+\. /)
         // Route undo/redo to the native undo manager (issue #2). Safari stops firing
         // its native Cmd-Z undo on a textarea once it has been edited via execCommand,
         // but document.execCommand("undo"/"redo") still drives the same stack reliably.
@@ -560,8 +562,9 @@ export class MdEditor {
         const before = this.element.value.substring(0, start)
         const lineStart = before.lastIndexOf('\n') + 1
         this.element.selectionStart = this.element.selectionEnd = lineStart
-        this.insertTextAtCursor(MdEditor.LIST_INDENT)
-        this.element.selectionStart = this.element.selectionEnd = start + MdEditor.LIST_INDENT.length
+        const indent = this.props.listIndent
+        this.insertTextAtCursor(indent)
+        this.element.selectionStart = this.element.selectionEnd = start + indent.length
     }
 
     removeTab() {
@@ -569,12 +572,14 @@ export class MdEditor {
         const before = this.element.value.substring(0, start)
         const lineStart = before.lastIndexOf('\n') + 1
         const currentLine = before.substring(lineStart)
-        // Remove one level of indentation: a two-space level, or a legacy tab.
+        // Remove one level of indentation: the configured unit, or a legacy tab / two spaces.
         let removeLen = 0
-        if (currentLine.startsWith(MdEditor.LIST_INDENT)) {
-            removeLen = MdEditor.LIST_INDENT.length
+        if (currentLine.startsWith(this.props.listIndent)) {
+            removeLen = this.props.listIndent.length
         } else if (currentLine.startsWith('\t')) {
             removeLen = 1
+        } else if (currentLine.startsWith('  ')) {
+            removeLen = 2
         }
         if (removeLen > 0) {
             this.element.selectionStart = lineStart
