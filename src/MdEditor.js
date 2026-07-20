@@ -16,6 +16,7 @@ export class MdEditor {
             colorBlockquote: "100,200,150",
             colorList: "100,200,150",
             colorStrikethrough: "255,100,100",
+            colorHighlight: "230,200,90",
             colorBold: "255,180,80",
             colorItalic: "180,130,255",
             colorHtmlTag: "100,160,255",
@@ -362,6 +363,10 @@ export class MdEditor {
         // Strikethrough ~~text~~
         result = result.replace(/(~~)(.*?)(~~)/g, (_, p1, p2, p3) =>
             this.colorSpan('colorStrikethrough', p1) + this.colorSpan('colorStrikethrough', p2) + this.colorSpan('colorStrikethrough', p3))
+
+        // Highlight ==text==
+        result = result.replace(/(==)(.*?)(==)/g, (_, p1, p2, p3) =>
+            this.colorSpan('colorHighlight', p1) + this.colorSpan('colorHighlight', p2) + this.colorSpan('colorHighlight', p3))
 
         // Bold **text**
         result = result.replace(/(\*\*)(.*?)(\*\*)/g, (_, p1, p2, p3) =>
