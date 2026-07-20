@@ -18,7 +18,10 @@ export class MdEditor {
             colorStrikethrough: "255,100,100",
             colorBold: "255,180,80",
             colorItalic: "180,130,255",
-            colorHtmlTag: "200,120,120",
+            colorHtmlTag: "100,160,255",
+            colorHtmlTagBracket: "100,200,150",
+            colorHtmlTagAttribute: "180,130,255",
+            colorHtmlTagValue: "255,180,80",
             colorHorizontalRule: "128,128,200",
             colorEscape: "128,128,128",
             colorFrontMatter: "128,128,200",
@@ -370,9 +373,20 @@ export class MdEditor {
         result = result.replace(/((?:^|[^\\*]))(\*)((?!\*).+?[^\\])(\*)/g, (_, pre, p1, p2, p3) =>
             pre + this.colorSpan('colorItalic', p1) + this.colorSpan('colorItalic', p2) + this.colorSpan('colorItalic', p3))
 
-        // HTML tags
-        result = result.replace(/(&lt;)(\/?[a-zA-Z]\w*)(.*?)(&gt;)/g, (_, p1, p2, p3, p4) =>
-            this.colorSpan('colorHtmlTag', p1 + p2 + p3 + p4))
+        // HTML tags, three-tone: syntax characters (< / > = " ') in colorHtmlTagBracket,
+        // tag name in colorHtmlTag, attribute names in colorHtmlTagAttribute, attribute
+        // values in colorHtmlTagValue
+        result = result.replace(/(&lt;\/?)([a-zA-Z]\w*)(.*?)(\/?&gt;)/g, (_, p1, p2, p3, p4) => {
+            const attrs = p3.replace(/([\w-]+)(\s*=\s*)(["'])(.*?)\3/g, (m, name, eq, quote, value) =>
+                this.colorSpan('colorHtmlTagAttribute', name)
+                + this.colorSpan('colorHtmlTagBracket', eq + quote)
+                + this.colorSpan('colorHtmlTagValue', value)
+                + this.colorSpan('colorHtmlTagBracket', quote))
+            return this.colorSpan('colorHtmlTagBracket', p1)
+                + this.colorSpan('colorHtmlTag', p2)
+                + this.colorSpan('colorHtmlTag', attrs)
+                + this.colorSpan('colorHtmlTagBracket', p4)
+        })
 
         // Tool inline highlighting
         for (const tool of this.tools) {
