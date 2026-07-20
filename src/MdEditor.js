@@ -6,6 +6,10 @@ import {defaultTools} from "./tools/DefaultTools.js"
 
 export class MdEditor {
 
+    // One level of list indentation. Markdown nests a "- " item by two columns, so two
+    // spaces is the canonical unit; a tab is still accepted when reading existing text.
+    static LIST_INDENT = '  '
+
     constructor(element, props) {
         this.element = element
         this.props = {
@@ -469,7 +473,7 @@ export class MdEditor {
     handleKeyDown(e) {
         const before = this.element.value.substring(0, this.element.selectionStart)
         const currentLine = before.substring(before.lastIndexOf('\n') + 1)
-        const isListMode = currentLine.match(/^\t*- /) || currentLine.match(/^\t*\d+\. /)
+        const isListMode = currentLine.match(/^(?:\t|  )*- /) || currentLine.match(/^(?:\t|  )*\d+\. /)
         // Route undo/redo to the native undo manager (issue #2). Safari stops firing
         // its native Cmd-Z undo on a textarea once it has been edited via execCommand,
         // but document.execCommand("undo"/"redo") still drives the same stack reliably.
@@ -541,27 +545,34 @@ export class MdEditor {
         this.insertTextAtCursor('\t')
     }
 
+    // Markdown nests a list by indenting the child past the parent marker. For "- " that is
+    // two columns, so a list level is two spaces (the canonical form), not a tab.
     insertTabAtLineStart() {
         const start = this.element.selectionStart
         const before = this.element.value.substring(0, start)
         const lineStart = before.lastIndexOf('\n') + 1
         this.element.selectionStart = this.element.selectionEnd = lineStart
-        this.insertTextAtCursor('\t')
-        this.element.selectionStart = this.element.selectionEnd = start + 1
+        this.insertTextAtCursor(MdEditor.LIST_INDENT)
+        this.element.selectionStart = this.element.selectionEnd = start + MdEditor.LIST_INDENT.length
     }
-
-    // test
 
     removeTab() {
         const start = this.element.selectionStart
         const before = this.element.value.substring(0, start)
         const lineStart = before.lastIndexOf('\n') + 1
         const currentLine = before.substring(lineStart)
-        if (currentLine.startsWith('\t')) {
+        // Remove one level of indentation: a two-space level, or a legacy tab.
+        let removeLen = 0
+        if (currentLine.startsWith(MdEditor.LIST_INDENT)) {
+            removeLen = MdEditor.LIST_INDENT.length
+        } else if (currentLine.startsWith('\t')) {
+            removeLen = 1
+        }
+        if (removeLen > 0) {
             this.element.selectionStart = lineStart
-            this.element.selectionEnd = lineStart + 1
+            this.element.selectionEnd = lineStart + removeLen
             this.insertTextAtCursor("")
-            this.element.selectionStart = this.element.selectionEnd = start - 1
+            this.element.selectionStart = this.element.selectionEnd = start - removeLen
         }
     }
 }
