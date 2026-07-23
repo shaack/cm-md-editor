@@ -130,7 +130,13 @@ Headings | Bold, Italic, Strikethrough, Highlight | UnorderedList, OrderedList |
 
 ### Writing a custom tool
 
-A tool is a class that receives the editor instance (and optional props) in its constructor. It can implement any combination of three optional methods:
+A tool is a class that receives the editor instance (and optional props) in its constructor. It can implement any combination of three optional methods — **all three are optional**, and a tool may implement just one of them:
+
+- `toolbarButtons()` — add buttons to the toolbar. **Optional**: a tool does not have to contribute a button.
+- `keyboardShortcuts()` — register Ctrl/Cmd shortcuts.
+- `highlightInline(html)` — extend the syntax highlighting.
+
+Because every method is optional, a tool can do **pure syntax highlighting**: implement only `highlightInline(html)` and no `toolbarButtons()` / `keyboardShortcuts()`. Such a tool adds no toolbar chrome at all and only colors matching syntax in the editor.
 
 ```javascript
 export class MyTool {
@@ -167,6 +173,27 @@ export class MyTool {
 }
 ```
 
+#### Highlight-only tool (no toolbar button)
+
+Since every method is optional, a tool that only implements `highlightInline(html)` adds no button and just colors matching syntax. `highlightInline` receives the already-escaped HTML of the line (it may already contain `<span>` tags from the built-in rules) and returns the modified HTML — so match on the text and leave existing tags intact:
+
+```javascript
+export class HashtagHighlight {
+    constructor(editor, props = {}) {
+        this.editor = editor
+        this.color = props.color || "180,130,255"
+    }
+
+    // No toolbarButtons() and no keyboardShortcuts() — pure syntax highlighting.
+    highlightInline(html) {
+        // Only touch the plain-text slices between tags, never a <span>'s attributes.
+        return html.replace(/<[^>]*>|[^<]+/g, (chunk) =>
+            chunk[0] === "<" ? chunk : chunk.replace(/#(\w+)/g,
+                (_, tag) => `<span style="color:rgba(${this.color},1)">#${tag}</span>`))
+    }
+}
+```
+
 For tools with co-located icons, use `import.meta.url` to resolve the icon path:
 
 ```javascript
@@ -196,7 +223,40 @@ These public methods and properties are available via `this.editor`:
 
 ### Example: DummyText tool
 
-A tool that inserts lorem ipsum text (see `example-addon-tools/DummyText.js`):
+A complete, self-contained tool that adds a toolbar button which inserts lorem
+ipsum text at the cursor. The full source lives in
+`example-addon-tools/DummyText.js`; its shape is:
+
+```javascript
+export class DummyText {
+    constructor(editor) {
+        this.editor = editor
+    }
+
+    // A single toolbar button. The icon ships next to the tool and is resolved
+    // relative to this file via import.meta.url.
+    toolbarButtons() {
+        const iconUrl = new URL("bi-body-text.svg", import.meta.url).href
+        return [{
+            name: "dummy-text",
+            title: "Insert dummy text",
+            iconUrl: iconUrl,
+            action: () => this.insertDummyText()
+        }]
+    }
+
+    // The button's action uses the editor API to insert text at the cursor,
+    // keeping the native undo/redo stack intact.
+    insertDummyText() {
+        const input = prompt("Word count (1–100):", "20")
+        if (input === null) return
+        const count = Math.max(1, Math.min(100, parseInt(input) || 20))
+        this.editor.insertTextAtCursor(generateDummyText(count))
+    }
+}
+```
+
+Register it by adding the class to the `tools` array:
 
 ```javascript
 import {MdEditor} from "cm-md-editor/src/MdEditor.js"
