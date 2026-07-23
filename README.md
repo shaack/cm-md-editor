@@ -212,6 +212,15 @@ new MdEditor(document.getElementById("editor"), {
 | Alt + ↑ / ↓ | Move the current line(s) up or down | Core editor |
 | Enter | Auto-continue list (unordered and ordered) | Core editor |
 
+## Testing
+
+Unit tests use [Teevi](https://github.com/shaack/teevi) and run in a real browser. Open `test/index.html` in a browser for the report, or run a headless Chrome pass:
+
+```bash
+npm install -g puppeteer   # once, provides the headless runner
+npm run test:headless
+```
+
 ## License
 
 MIT
