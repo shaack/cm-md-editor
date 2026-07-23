@@ -12,7 +12,7 @@ describe("TestCore", () => {
 
     it("should construct with default props", () => {
         const {editor} = makeEditor()
-        assert.equal(editor.props.listIndent, "  ")
+        assert.equal(editor.props.listIndent, "    ")
         assert.equal(editor.props.wordWrap, true)
         assert.true(editor.tools.length > 0)
     })
@@ -23,7 +23,7 @@ describe("TestCore", () => {
     })
 
     it("should expose the static default list indent", () => {
-        assert.equal(MdEditor.LIST_INDENT, "  ")
+        assert.equal(MdEditor.LIST_INDENT, "    ")
     })
 
     it("should build the toolbar, backdrop and highlight layer", () => {
@@ -33,6 +33,17 @@ describe("TestCore", () => {
         assert.true(!!editor.wrapButton)
         // The textarea got wrapped, with a toolbar as a preceding sibling.
         assert.equal(textarea.parentNode.querySelector("textarea"), textarea)
+    })
+
+    it("should default colorChrome to a neutral grey", () => {
+        const {editor} = makeEditor()
+        assert.equal(editor.props.colorChrome, "128,128,128")
+    })
+
+    it("should apply a custom colorChrome to the toolbar background", () => {
+        const {editor, textarea} = makeEditor("x", 0, 0, {colorChrome: "10,20,30"})
+        const toolbar = textarea.previousElementSibling
+        assert.true(toolbar.style.backgroundColor.includes("10, 20, 30"))
     })
 
     it("should report the current line for a caret in the middle line", () => {

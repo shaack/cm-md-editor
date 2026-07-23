@@ -6,15 +6,18 @@ import {defaultTools} from "./tools/DefaultTools.js"
 
 export class MdEditor {
 
-    // Default unit of list indentation. Markdown nests a "- " item by two columns, so two
-    // spaces is the canonical unit; a tab is still accepted when reading existing text.
+    // Default unit of list indentation. Four spaces per level; a tab or a legacy two-space
+    // level is still accepted when reading existing text (see removeTab).
     // Configurable per instance through the listIndent prop.
-    static LIST_INDENT = '  '
+    static LIST_INDENT = '    '
 
     constructor(element, props) {
         this.element = element
         this.props = {
             listIndent: MdEditor.LIST_INDENT,
+            // Toolbar chrome tint (RGB triplet), applied at low alpha to the toolbar
+            // background, borders, separators and button hover states.
+            colorChrome: "128,128,128",
             colorHeading: "100,160,255",
             colorCode: "130,170,200",
             colorComment: "128,128,128",
@@ -58,7 +61,8 @@ export class MdEditor {
         this.element.parentNode.insertBefore(wrapper, this.element)
         wrapper.appendChild(this.element)
         const toolbar = document.createElement('div')
-        toolbar.style.cssText = 'display:flex;gap:1px;padding:2px;flex-wrap:wrap;background:rgba(128,128,128,0.15);border:1px solid rgba(128,128,128,0.3);border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;width:100%;'
+        const chrome = this.props.colorChrome
+        toolbar.style.cssText = `display:flex;gap:1px;padding:2px;flex-wrap:wrap;background:rgba(${chrome},0.15);border:1px solid rgba(${chrome},0.3);border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;width:100%;`
         wrapper.insertBefore(toolbar, this.element)
         this.element.style.borderRadius = '0 0 4px 4px'
         for (const tool of this.tools) {
@@ -83,7 +87,7 @@ export class MdEditor {
         this.wrapButton.style.width = '32px'
         this.wrapButton.style.height = '28px'
         this.loadIcon('text-wrap.svg').then(svg => { this.wrapButton.innerHTML = svg })
-        this.wrapButton.addEventListener('mouseenter', () => { this.wrapButton.style.opacity = '1'; this.wrapButton.style.background = 'rgba(128,128,128,0.2)' })
+        this.wrapButton.addEventListener('mouseenter', () => { this.wrapButton.style.opacity = '1'; this.wrapButton.style.background = `rgba(${chrome},0.2)` })
         this.wrapButton.addEventListener('mouseleave', () => { this.wrapButton.style.opacity = this.wrapEnabled ? '0.9' : '0.4'; this.wrapButton.style.background = 'none' })
         this.wrapButton.addEventListener('mousedown', (e) => e.preventDefault())
         this.wrapButton.addEventListener('click', (e) => {
@@ -100,9 +104,10 @@ export class MdEditor {
     }
 
     createToolbarButton(toolbar, btn) {
+        const chrome = this.props.colorChrome
         if (btn.separator) {
             const sep = document.createElement('div')
-            sep.style.cssText = 'width:1px;align-self:stretch;margin:3px 5px;background:rgba(128,128,128,0.4);'
+            sep.style.cssText = `width:1px;align-self:stretch;margin:3px 5px;background:rgba(${chrome},0.4);`
             toolbar.appendChild(sep)
             return
         }
@@ -125,7 +130,7 @@ export class MdEditor {
             button.style.height = '28px'
             this.loadIcon(btn.iconFile).then(svg => { button.innerHTML = svg })
         }
-        button.addEventListener('mouseenter', () => { button.style.opacity = '1'; button.style.background = 'rgba(128,128,128,0.2)' })
+        button.addEventListener('mouseenter', () => { button.style.opacity = '1'; button.style.background = `rgba(${chrome},0.2)` })
         button.addEventListener('mouseleave', () => { button.style.opacity = '0.6'; button.style.background = 'none' })
         button.addEventListener('mousedown', (e) => e.preventDefault())
         button.addEventListener('click', (e) => {
@@ -306,18 +311,33 @@ export class MdEditor {
     }
 
     highlightInline(line) {
-        // Split by inline code to protect code content from other highlighting
+        // Split the line into protected tokens (inline code and bare URLs) and plain text.
+        // Protected tokens are emitted verbatim (only HTML-escaped), so markdown inside them
+        // — e.g. the underscores in https://host/a_b_c — is never treated as formatting.
         const segments = []
         let lastIndex = 0
-        const codeRegex = /`([^`]+)`/g
+        // Inline code, OR an autolink: an http(s) URL not part of markdown link / html
+        // attribute syntax (that context is handled by highlightTextSegment instead).
+        const tokenRegex = /`[^`]+`|https?:\/\/[^\s<>()\[\]"'`]+/g
         let match
 
-        while ((match = codeRegex.exec(line)) !== null) {
+        while ((match = tokenRegex.exec(line)) !== null) {
+            const token = match[0]
+            const isCode = token[0] === '`'
+            if (!isCode) {
+                // Only autolink a *bare* URL. When the character before it belongs to
+                // markdown/html syntax, leave the URL in the text so its surrounding
+                // construct (e.g. [text](url)) is highlighted as a whole.
+                const prev = match.index > 0 ? line[match.index - 1] : ''
+                if (prev === '(' || prev === '<' || prev === '"' || prev === "'" || prev === ']') {
+                    continue
+                }
+            }
             if (match.index > lastIndex) {
                 segments.push({type: 'text', content: line.substring(lastIndex, match.index)})
             }
-            segments.push({type: 'code', content: match[0]})
-            lastIndex = codeRegex.lastIndex
+            segments.push({type: isCode ? 'code' : 'url', content: token})
+            lastIndex = tokenRegex.lastIndex
         }
         if (lastIndex < line.length) {
             segments.push({type: 'text', content: line.substring(lastIndex)})
@@ -330,6 +350,9 @@ export class MdEditor {
         for (const seg of segments) {
             if (seg.type === 'code') {
                 result += this.colorSpan('colorCode', this.escapeHtml(seg.content))
+            } else if (seg.type === 'url') {
+                result += '<span style="color:rgba(' + this.props.colorLink + ',1);text-decoration:underline">'
+                    + this.escapeHtml(seg.content) + '</span>'
             } else {
                 result += this.highlightTextSegment(this.escapeHtml(seg.content))
             }
@@ -341,9 +364,12 @@ export class MdEditor {
         let result = escaped
         const c = (prop) => this.props[prop]
 
-        // Escape sequences: dim the backslash before markdown punctuation
-        result = result.replace(/\\([\\`*_{}[\]()#+\-.!~|])/g,
-            '<span style="color:rgba(' + c('colorEscape') + ',1)">\\</span>$1')
+        // Escape sequences: dim the backslash before markdown punctuation and emit the
+        // escaped character as a numeric HTML entity. The entity renders as the literal
+        // character but is no longer a bare '*'/'_'/'['… delimiter, so the inline rules
+        // below leave it alone (e.g. \_not italic\_ stays literal, not italicised).
+        result = result.replace(/\\([\\`*_{}[\]()#+\-.!~|])/g, (_, ch) =>
+            '<span style="color:rgba(' + c('colorEscape') + ',1)">\\</span>&#' + ch.charCodeAt(0) + ';')
 
         // Unordered list markers with optional task list checkbox
         result = result.replace(/^([\t ]*)(- )(\[[ xX]\] )?/, (_, tabs, marker, task) => {

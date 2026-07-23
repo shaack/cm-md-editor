@@ -16,7 +16,7 @@ describe("TestListEditing", () => {
     it("should indent a list line at its start with the list indent unit", () => {
         const {editor, textarea} = makeEditor("- item", 6)
         editor.insertTabAtLineStart()
-        assert.equal(snapshot(textarea), "  - item|")
+        assert.equal(snapshot(textarea), "    - item|")
     })
 
     it("should outdent a two-space list indent", () => {
@@ -44,11 +44,11 @@ describe("TestListEditing", () => {
         const e = keydown({key: "Tab"})
         editor.handleKeyDown(e)
         assert.true(e.defaultPrevented)
-        assert.equal(snapshot(textarea), "  - i|tem")
+        assert.equal(snapshot(textarea), "    - i|tem")
     })
 
     it("should outdent a list line via Shift+Tab", () => {
-        const {editor, textarea} = makeEditor("  - item", 5)
+        const {editor, textarea} = makeEditor("    - item", 7)
         const e = keydown({key: "Tab", shiftKey: true})
         editor.handleKeyDown(e)
         assert.true(e.defaultPrevented)
@@ -59,7 +59,7 @@ describe("TestListEditing", () => {
         const {editor, textarea} = makeEditor("1. item", 4)
         const e = keydown({key: "Tab"})
         editor.handleKeyDown(e)
-        assert.equal(snapshot(textarea), "  1. i|tem")
+        assert.equal(snapshot(textarea), "    1. i|tem")
     })
 
     it("should continue an unordered list on Enter", () => {

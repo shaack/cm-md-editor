@@ -56,6 +56,72 @@ describe("TestHighlighting", () => {
         assert.true(segment(editor, "- item").includes("100,200,150"))
     })
 
+    it("should dim the backslash and emit the escaped character as an entity", () => {
+        const {editor} = makeEditor()
+        const esc = "rgba(" + editor.props.colorEscape + ",1)"
+        // The backslash is wrapped in the escape color; the escaped * becomes &#42; so no
+        // later inline rule can treat it as a delimiter.
+        assert.true(segment(editor, "\\*").includes(esc + '">\\</span>&#42;'))
+    })
+
+    it("should escape an underscore as well", () => {
+        const {editor} = makeEditor()
+        const esc = "rgba(" + editor.props.colorEscape + ",1)"
+        assert.true(segment(editor, "\\_").includes(esc + '">\\</span>&#95;'))
+    })
+
+    it("should dim only the first of a double backslash, emitting the second as an entity", () => {
+        const {editor} = makeEditor()
+        const esc = "rgba(" + editor.props.colorEscape + ",1)"
+        assert.true(segment(editor, "\\\\").includes(esc + '">\\</span>&#92;'))
+    })
+
+    it("should not dim a backslash before a non-markdown character", () => {
+        const {editor} = makeEditor()
+        const esc = "rgba(" + editor.props.colorEscape + ",1)"
+        assert.false(segment(editor, "a\\b").includes(esc))
+    })
+
+    it("should not colour an escaped asterisk as bold", () => {
+        const {editor} = makeEditor()
+        // \*\* must not be read as bold ** markers
+        assert.false(segment(editor, "\\*\\*").includes("rgba(" + editor.props.colorBold + ",1)"))
+    })
+
+    it("should not italicise text between escaped underscores", () => {
+        const {editor} = makeEditor()
+        // The screenshot case: \_not italic\_ must stay literal, not get the italic tint.
+        assert.false(segment(editor, "\\_not italic\\_").includes("rgba(" + editor.props.colorItalic + ",1)"))
+    })
+
+    it("should not italicise text between escaped asterisks", () => {
+        const {editor} = makeEditor()
+        assert.false(segment(editor, "\\*not italic\\*").includes("rgba(" + editor.props.colorItalic + ",1)"))
+    })
+
+    it("should autolink a bare URL with the link color and underline", () => {
+        const {editor} = makeEditor()
+        const html = editor.highlightInline("see https://shaack.com/page")
+        assert.true(html.includes("rgba(" + editor.props.colorLink + ",1)"))
+        assert.true(html.includes("text-decoration:underline"))
+    })
+
+    it("should ignore markdown inside a bare URL", () => {
+        const {editor} = makeEditor()
+        // The screenshot case: underscores in the URL must not become italic.
+        const html = editor.highlightInline("https://shaack.com/this_should_not_be_italic")
+        assert.false(html.includes("rgba(" + editor.props.colorItalic + ",1)"))
+    })
+
+    it("should not autolink the URL of a markdown link", () => {
+        const {editor} = makeEditor()
+        // [t](url): the URL is part of the link syntax, highlighted as a link, not underlined.
+        const html = editor.highlightInline("[t](https://shaack.com/a_b)")
+        assert.true(html.includes("rgba(" + editor.props.colorLink + ",1)"))
+        assert.false(html.includes("text-decoration:underline"))
+        assert.false(html.includes("rgba(" + editor.props.colorItalic + ",1)"))
+    })
+
     it("should protect inline code from other inline rules", () => {
         const {editor} = makeEditor()
         const html = editor.highlightInline("`**not bold**`")

@@ -9,7 +9,8 @@ A minimal, dependency-free markdown editor as a vanilla JavaScript ES6 module.
 ## Key features
 
 - Vanilla JavaScript module, zero dependencies
-- Syntax highlighting for headings, bold, italic, strikethrough, code, lists, links, images, blockquotes, HTML tags, horizontal rules, front matter and more
+- Syntax highlighting for headings, bold, italic, strikethrough, highlight, code, lists, links, images, blockquotes, HTML tags, horizontal rules, front matter and more
+- Bare `http(s)` URLs are auto-detected, underlined, and protected from markdown formatting (e.g. underscores in a URL stay literal)
 - Modular toolbar built from composable tools
 - Word wrap toggle with persistent state (localStorage)
 - List mode: Tab/Shift-Tab to indent/outdent, auto-continuation on Enter
@@ -36,7 +37,7 @@ npm install cm-md-editor
 </script>
 ```
 
-This creates an editor with the default toolbar: Headings (h1–h3), Bold, Italic, Strikethrough, Unordered List, Ordered List, Insert Link, Insert Image.
+This creates an editor with the default toolbar: Headings (h1–h3), Bold, Italic, Strikethrough, Highlight, Unordered List, Ordered List, Insert Link, Insert Image.
 
 ### Custom toolbar
 
@@ -73,7 +74,9 @@ All props are optional. Pass them as the second argument to the constructor.
 |------|------|---------|-------------|
 | `tools` | `array` | `defaultTools` | Array of tool classes (or `[class, props]` tuples). See [Tools](#tools) |
 | `wordWrap` | `boolean` | `true` | Default word wrap state. Overridden by localStorage if the user has toggled it |
-| `listIndent` | `string` | `"  "` (two spaces) | One level of list indentation, inserted/removed with Tab/Shift-Tab on a list line. Tabs and two-space levels are still accepted when reading existing text |
+| `listIndent` | `string` | `"    "` (four spaces) | One level of list indentation, inserted/removed with Tab/Shift-Tab on a list line. Tabs and two-space levels are still accepted when reading existing text |
+| `iconsPath` | `string` | bundled `src/tools/icons/` | Base URL for tool icon files referenced by `iconFile`. Resolved via `import.meta.url` by default |
+| `colorChrome` | `string` | `"128,128,128"` | RGB tint for the toolbar chrome (background, borders, separators, button hover), applied at low alpha |
 | `colorHeading` | `string` | `"100,160,255"` | RGB color for headings |
 | `colorCode` | `string` | `"130,170,200"` | RGB color for code spans and fenced code blocks |
 | `colorComment` | `string` | `"128,128,128"` | RGB color for HTML comments |
@@ -81,14 +84,18 @@ All props are optional. Pass them as the second argument to the constructor.
 | `colorBlockquote` | `string` | `"100,200,150"` | RGB color for blockquote prefixes |
 | `colorList` | `string` | `"100,200,150"` | RGB color for list markers |
 | `colorStrikethrough` | `string` | `"255,100,100"` | RGB color for ~~strikethrough~~ |
+| `colorHighlight` | `string` | `"230,200,90"` | RGB color for ==highlight== |
 | `colorBold` | `string` | `"255,180,80"` | RGB color for **bold** |
 | `colorItalic` | `string` | `"180,130,255"` | RGB color for _italic_ |
-| `colorHtmlTag` | `string` | `"200,120,120"` | RGB color for HTML tags |
+| `colorHtmlTag` | `string` | `"100,160,255"` | RGB color for HTML tag names |
+| `colorHtmlTagBracket` | `string` | `"100,200,150"` | RGB color for HTML tag syntax characters (`< / > = " '`) |
+| `colorHtmlTagAttribute` | `string` | `"180,130,255"` | RGB color for HTML attribute names |
+| `colorHtmlTagValue` | `string` | `"255,180,80"` | RGB color for HTML attribute values |
 | `colorHorizontalRule` | `string` | `"128,128,200"` | RGB color for horizontal rules |
 | `colorEscape` | `string` | `"128,128,128"` | RGB color for escape sequences |
 | `colorFrontMatter` | `string` | `"128,128,200"` | RGB color for YAML front matter |
 
-Colors are specified as RGB strings (e.g. `"255,180,80"`) and rendered at full opacity.
+Colors are specified as RGB strings (e.g. `"255,180,80"`). Syntax colors render at full opacity (headings fade slightly per level); `colorChrome` is applied at low alpha.
 
 ## Tools
 
@@ -102,6 +109,7 @@ The toolbar is built entirely from tools. Each tool is a class that provides too
 | `Bold` | bold | Ctrl/Cmd+B | Toggle bold (`**`) |
 | `Italic` | italic | Ctrl/Cmd+I | Toggle italic (`_`) |
 | `Strikethrough` | strikethrough | — | Toggle strikethrough (`~~`) |
+| `Highlight` | highlight | — | Toggle highlight (`==`) |
 | `UnorderedList` | ul | — | Toggle unordered list prefix (`- `) |
 | `OrderedList` | ol | — | Toggle ordered list prefix (`1. `) |
 | `InsertLink` | link | — | Insert markdown link |
@@ -117,7 +125,7 @@ import {defaultTools} from "cm-md-editor/src/tools/DefaultTools.js"
 The default toolbar order is:
 
 ```
-Headings | Bold, Italic, Strikethrough | UnorderedList, OrderedList | InsertLink, InsertImage
+Headings | Bold, Italic, Strikethrough, Highlight | UnorderedList, OrderedList | InsertLink, InsertImage
 ```
 
 ### Writing a custom tool
@@ -211,6 +219,8 @@ new MdEditor(document.getElementById("editor"), {
 | Shift + Tab | Outdent list item | Core editor |
 | Alt + ↑ / ↓ | Move the current line(s) up or down | Core editor |
 | Enter | Auto-continue list (unordered and ordered) | Core editor |
+| Ctrl/Cmd + Z | Undo | Core editor |
+| Ctrl/Cmd + Shift + Z (or Ctrl + Y) | Redo | Core editor |
 
 ## Testing
 
