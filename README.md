@@ -13,6 +13,7 @@ A minimal, dependency-free markdown editor as a vanilla JavaScript ES6 module.
 - Modular toolbar built from composable tools
 - Word wrap toggle with persistent state (localStorage)
 - List mode: Tab/Shift-Tab to indent/outdent, auto-continuation on Enter
+- Move lines up/down with Alt+Up/Down (works on any line, not just list items)
 - Bold with Ctrl/Cmd+B, italic with Ctrl/Cmd+I (provided by tools)
 - Native undo/redo support (Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z)
 - Lightweight, fast, easy to use
@@ -208,6 +209,7 @@ new MdEditor(document.getElementById("editor"), {
 | Ctrl/Cmd + I | Toggle italic | `Italic` tool |
 | Tab | Indent list item or insert tab | Core editor |
 | Shift + Tab | Outdent list item | Core editor |
+| Alt + ↑ / ↓ | Move the current line(s) up or down | Core editor |
 | Enter | Auto-continue list (unordered and ordered) | Core editor |
 
 ## License

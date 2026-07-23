@@ -501,6 +501,21 @@ export class MdEditor {
             }
             return
         }
+        // Alt+Up/Down: move the current line(s) up or down. Works on any line, not only
+        // list items. Option+Arrow is a plain text-navigation key, so preventDefault
+        // reliably suppresses the default and it triggers no macOS system beep (unlike
+        // Cmd-based combos). Indent/outdent stays on Tab / Shift-Tab.
+        if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                this.moveLines(-1)
+                return
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                this.moveLines(1)
+                return
+            }
+        }
         if (e.key === 'Tab') {
             e.preventDefault()
             if (isListMode) {
@@ -586,6 +601,52 @@ export class MdEditor {
             this.element.selectionEnd = lineStart + removeLen
             this.insertTextAtCursor("")
             this.element.selectionStart = this.element.selectionEnd = start - removeLen
+        }
+    }
+
+    // Full-line range covered by the current selection. A selection that ends exactly at a
+    // line start does not pull in that following (unselected) line.
+    getSelectedLinesRange() {
+        const value = this.element.value
+        const selStart = this.element.selectionStart
+        const selEnd = this.element.selectionEnd
+        const blockStart = value.lastIndexOf('\n', selStart - 1) + 1
+        let effEnd = selEnd
+        if (selEnd > selStart && value[selEnd - 1] === '\n') effEnd = selEnd - 1
+        let blockEnd = value.indexOf('\n', effEnd)
+        if (blockEnd < 0) blockEnd = value.length
+        return {blockStart, blockEnd}
+    }
+
+    // Move the selected line block up (dir < 0) or down (dir > 0), swapping it with the
+    // neighbouring line. Selection follows the moved block. Uses insertText so the swap
+    // lands as a single, undoable edit.
+    moveLines(dir) {
+        const value = this.element.value
+        const selStart = this.element.selectionStart
+        const selEnd = this.element.selectionEnd
+        const {blockStart, blockEnd} = this.getSelectedLinesRange()
+        const blockText = value.substring(blockStart, blockEnd)
+        if (dir < 0) {
+            if (blockStart === 0) return // already at the top
+            const prevStart = value.lastIndexOf('\n', blockStart - 2) + 1
+            const prevText = value.substring(prevStart, blockStart - 1)
+            this.selectLineRange(prevStart, blockEnd)
+            this.insertTextAtCursor(blockText + '\n' + prevText)
+            const shift = -(prevText.length + 1)
+            this.element.selectionStart = selStart + shift
+            this.element.selectionEnd = selEnd + shift
+        } else {
+            if (blockEnd >= value.length) return // already at the bottom
+            const nextStart = blockEnd + 1
+            let nextEnd = value.indexOf('\n', nextStart)
+            if (nextEnd < 0) nextEnd = value.length
+            const nextText = value.substring(nextStart, nextEnd)
+            this.selectLineRange(blockStart, nextEnd)
+            this.insertTextAtCursor(nextText + '\n' + blockText)
+            const shift = nextText.length + 1
+            this.element.selectionStart = selStart + shift
+            this.element.selectionEnd = selEnd + shift
         }
     }
 }
