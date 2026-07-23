@@ -39,6 +39,23 @@ npm install cm-md-editor
 
 This creates an editor with the default toolbar: Headings (h1–h3), Bold, Italic, Strikethrough, Highlight, Unordered List, Ordered List, Insert Link, Insert Image.
 
+### Setting the value programmatically
+
+The editor renders the visible, syntax-highlighted text in an overlay and makes the textarea's own text transparent. That overlay repaints on the textarea's native `input` event. So when you change `textarea.value` **from code** — an autocomplete dropdown, a toolbar action outside the editor, a paste transform — no `input` event fires, the overlay keeps the old text, and the new text stays invisible until the next keystroke.
+
+After a programmatic value change, trigger a repaint in one of two ways:
+
+```javascript
+// You hold the editor instance: call its public repaint method.
+editor.updateHighlight()
+
+// You only have the textarea (e.g. code attached around it): dispatch input,
+// which also notifies any other listeners.
+textarea.dispatchEvent(new Event("input", {bubbles: true}))
+```
+
+Typing into the editor needs none of this — it only matters for value changes made from code.
+
 ### Custom toolbar
 
 Compose your own toolbar by passing a `tools` array:
