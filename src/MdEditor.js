@@ -60,11 +60,22 @@ export class MdEditor {
         const wrapper = document.createElement('div')
         this.element.parentNode.insertBefore(wrapper, this.element)
         wrapper.appendChild(this.element)
+        // Flex column so the toolbar can sit AFTER the textarea in the DOM (tab
+        // order: textarea before toolbar — tabbing from a preceding field lands in
+        // the text, not the buttons) while CSS order keeps it visually on top.
+        wrapper.style.display = 'flex'
+        wrapper.style.flexDirection = 'column'
         const toolbar = document.createElement('div')
         const chrome = this.props.colorChrome
-        toolbar.style.cssText = `display:flex;gap:1px;padding:2px;flex-wrap:wrap;background:rgba(${chrome},0.15);border:1px solid rgba(${chrome},0.3);border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;width:100%;`
-        wrapper.insertBefore(toolbar, this.element)
+        toolbar.style.cssText = `order:-1;display:flex;gap:1px;padding:2px;flex-wrap:wrap;background:rgba(${chrome},0.15);border:1px solid rgba(${chrome},0.3);border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;width:100%;`
+        wrapper.appendChild(toolbar)
         this.element.style.borderRadius = '0 0 4px 4px'
+        // WAI-ARIA toolbar pattern: one tab stop, arrow keys move between the
+        // buttons (roving tabindex), Escape returns to the textarea.
+        this.toolbarElement = toolbar
+        toolbar.setAttribute('role', 'toolbar')
+        toolbar.setAttribute('aria-label', this.props.toolbarLabel || 'Text formatting')
+        toolbar.addEventListener('keydown', (event) => this.handleToolbarKeydown(event))
         for (const tool of this.tools) {
             if (typeof tool.toolbarButtons === 'function') {
                 tool.toolbarButtons().forEach(btn => this.createToolbarButton(toolbar, btn))
@@ -95,11 +106,48 @@ export class MdEditor {
             this.toggleWrapMode()
         })
         this.wrapButton.style.opacity = this.wrapEnabled ? '0.9' : '0.4'
+        this.wrapButton.tabIndex = -1
+        this.wrapButton.setAttribute('aria-label', this.wrapButton.title)
         toolbar.appendChild(this.wrapButton)
         // Apply saved wrap state
         if (!this.wrapEnabled) {
             this.element.style.whiteSpace = 'pre'
             this.element.style.overflowX = 'auto'
+        }
+        // Roving tabindex: exactly one button is the toolbar's tab stop
+        const firstButton = toolbar.querySelector('button')
+        if (firstButton) {
+            firstButton.tabIndex = 0
+        }
+    }
+
+    handleToolbarKeydown(event) {
+        if (event.key === 'Escape') {
+            this.element.focus()
+            return
+        }
+        const buttons = Array.from(this.toolbarElement.querySelectorAll('button'))
+        const index = buttons.indexOf(document.activeElement)
+        if (index === -1) {
+            return
+        }
+        let next = null
+        if (event.key === 'ArrowRight') {
+            next = buttons[(index + 1) % buttons.length]
+        } else if (event.key === 'ArrowLeft') {
+            next = buttons[(index - 1 + buttons.length) % buttons.length]
+        } else if (event.key === 'Home') {
+            next = buttons[0]
+        } else if (event.key === 'End') {
+            next = buttons[buttons.length - 1]
+        }
+        if (next) {
+            event.preventDefault()
+            // move the single tab stop with the focus, so re-entering the toolbar
+            // returns to the last used button
+            buttons.forEach(button => button.tabIndex = -1)
+            next.tabIndex = 0
+            next.focus()
         }
     }
 
@@ -114,6 +162,10 @@ export class MdEditor {
         const button = document.createElement('button')
         button.type = 'button'
         button.title = btn.title
+        button.tabIndex = -1 // roving tabindex, see createToolbar/handleToolbarKeydown
+        if (btn.title) {
+            button.setAttribute('aria-label', btn.title)
+        }
         if (btn.name) {
             button.dataset.name = btn.name
             button.classList.add('mde-btn-' + btn.name)
