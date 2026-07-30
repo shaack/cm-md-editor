@@ -151,7 +151,8 @@ A tool is a class that receives the editor instance (and optional props) in its 
 
 - `toolbarButtons()` — add buttons to the toolbar. **Optional**: a tool does not have to contribute a button.
 - `keyboardShortcuts()` — register Ctrl/Cmd shortcuts.
-- `highlightInline(html)` — extend the syntax highlighting.
+- `highlightInline(html)` — extend the syntax highlighting (inline, per line).
+- `highlightLine(line, ctx)` — take over a whole line's highlighting, with block state across the pass.
 
 Because every method is optional, a tool can do **pure syntax highlighting**: implement only `highlightInline(html)` and no `toolbarButtons()` / `keyboardShortcuts()`. Such a tool adds no toolbar chrome at all and only colors matching syntax in the editor.
 
@@ -207,6 +208,38 @@ export class HashtagHighlight {
         return html.replace(/<[^>]*>|[^<]+/g, (chunk) =>
             chunk[0] === "<" ? chunk : chunk.replace(/#(\w+)/g,
                 (_, tag) => `<span style="color:rgba(${this.color},1)">#${tag}</span>`))
+    }
+}
+```
+
+#### Line-highlighting tool (block state)
+
+`highlightInline(html)` only sees one line at a time and runs after the built-in rules. When a tool needs **block state** (whether the current line is inside some multi-line construct) or wants to **suppress a built-in rule** for a line, it implements `highlightLine(line, ctx)` instead. It is called once per line, before the built-in block rules. Returning a string renders that line and skips the built-in rules for it; returning `null`/nothing lets the built-in rules run as usual.
+
+`ctx` is the same object for every line of a highlight pass:
+
+| Property | Description |
+|----------|-------------|
+| `ctx.state` | A fresh, mutable object per pass — store your block state here |
+| `ctx.lineIndex` | Index of the current line |
+| `ctx.escapeHtml(s)` | The built-in HTML escaper |
+| `ctx.highlightInline(line, opts)` | The built-in inline highlighting, reusable. `opts.skipOrderedList` suppresses the `1. ` ordered-list marker rule |
+
+Example — only treat `1. ` as an ordered-list marker inside an explicit `<list>…</list>` wrapper, otherwise keep it as plain text:
+
+```javascript
+export class ListBlockHighlight {
+    constructor(editor) {
+        this.editor = editor
+    }
+    highlightLine(line, ctx) {
+        const trimmed = line.trim()
+        if (trimmed === '<list>')  { ctx.state.inList = true;  return null } // let the HTML-tag rule colour it
+        if (trimmed === '</list>') { ctx.state.inList = false; return null }
+        if (!ctx.state.inList && /^\s*\d+\.\s/.test(line)) {
+            return ctx.highlightInline(line, {skipOrderedList: true})
+        }
+        return null
     }
 }
 ```

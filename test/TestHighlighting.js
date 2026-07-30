@@ -13,6 +13,22 @@ function segment(editor, text) {
     return editor.highlightTextSegment(editor.escapeHtml(text))
 }
 
+// A line-highlighting plugin: ordered-list markers only count inside <list>…</list>.
+class ListGate {
+    constructor(editor) {
+        this.editor = editor
+    }
+    highlightLine(line, ctx) {
+        const t = line.trim()
+        if (t === '<list>') { ctx.state.inList = true; return null }
+        if (t === '</list>') { ctx.state.inList = false; return null }
+        if (!ctx.state.inList && /^\s*\d+\.\s/.test(line)) {
+            return ctx.highlightInline(line, {skipOrderedList: true})
+        }
+        return null
+    }
+}
+
 describe("TestHighlighting", () => {
 
     it("should color a heading line", () => {
@@ -145,5 +161,54 @@ describe("TestHighlighting", () => {
         const {editor} = makeEditor("line")
         editor.updateHighlight()
         assert.true(editor.highlightLayer.innerHTML.endsWith("\n"))
+    })
+
+    // --- ordered-list suppression + highlightLine plugin hook -------------------------------
+
+    it("should color an ordered list marker by default", () => {
+        const {editor} = makeEditor()
+        assert.true(segment(editor, "1. item").includes("rgba(" + editor.props.colorList + ",1)"))
+    })
+
+    it("should suppress the ordered marker in highlightTextSegment when skipOrderedList is set", () => {
+        const {editor} = makeEditor()
+        const html = editor.highlightTextSegment(editor.escapeHtml("1. item"), {skipOrderedList: true})
+        assert.false(html.includes("rgba(" + editor.props.colorList + ",1)"))
+    })
+
+    it("should forward skipOrderedList through highlightInline", () => {
+        const {editor} = makeEditor()
+        assert.true(editor.highlightInline("1. item").includes("rgba(" + editor.props.colorList + ",1)"))
+        assert.false(editor.highlightInline("1. item", {skipOrderedList: true}).includes("rgba(" + editor.props.colorList + ",1)"))
+    })
+
+    it("should use a highlightLine plugin's returned html and skip built-in rules", () => {
+        class Stub {
+            constructor(editor) { this.editor = editor }
+            highlightLine(line) { return line === "X" ? "STUB" : null }
+        }
+        const {editor} = makeEditor("# H\nX\n- a", 0, 0, {tools: [Stub]})
+        editor.updateHighlight()
+        assert.true(editor.highlightLayer.innerHTML.includes("STUB"))
+    })
+
+    it("should persist ctx.state across the lines of a pass", () => {
+        const seen = []
+        class Counter {
+            constructor(editor) { this.editor = editor }
+            highlightLine(line, ctx) { ctx.state.n = (ctx.state.n || 0) + 1; seen.push(ctx.state.n); return null }
+        }
+        const {editor} = makeEditor("a\nb\nc", 0, 0, {tools: [Counter]})
+        editor.updateHighlight()
+        assert.equal(seen.join(","), "1,2,3")
+    })
+
+    it("should let a highlightLine plugin gate ordered lists by block state", () => {
+        const {editor} = makeEditor("1. a\n<list>\n2. b\n</list>", 0, 0, {tools: [ListGate]})
+        editor.updateHighlight()
+        const html = editor.highlightLayer.innerHTML
+        // Only "2. " (inside the wrapper) is colored as an ordered marker; "1. " stays plain text.
+        const orderedColor = new RegExp("rgba\\(" + editor.props.colorList + ",1\\)", "g")
+        assert.equal((html.match(orderedColor) || []).length, 1)
     })
 })

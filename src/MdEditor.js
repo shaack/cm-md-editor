@@ -274,6 +274,18 @@ export class MdEditor {
             inFrontMatter = true
         }
 
+        // Per-pass context handed to line-highlighting plugins (tools with a highlightLine hook).
+        // `state` is a fresh, mutable object that persists across the lines of this pass, so a
+        // plugin can track block state (e.g. being inside a custom wrapper). `highlightInline`
+        // and `escapeHtml` are the built-in helpers, so a plugin can reuse the default rendering
+        // (optionally suppressing a rule via opts, e.g. {skipOrderedList: true}).
+        const ctx = {
+            state: {},
+            lineIndex: 0,
+            escapeHtml: (s) => this.escapeHtml(s),
+            highlightInline: (l, opts) => this.highlightInline(l, opts)
+        }
+
         for (let i = 0; i < lines.length; i++) {
             if (i > 0) html += '\n'
             const line = lines[i]
@@ -323,6 +335,24 @@ export class MdEditor {
                 continue
             }
 
+            // Line-highlighting plugins: a tool may fully render this line, e.g. to suppress a
+            // built-in rule inside its own block. Runs after the structural code / comment /
+            // front-matter states, so plugins only see normal content lines. A returned string
+            // is used verbatim and the built-in rules below are skipped for this line.
+            ctx.lineIndex = i
+            let handledByPlugin = false
+            for (const tool of this.tools) {
+                if (typeof tool.highlightLine === 'function') {
+                    const rendered = tool.highlightLine(line, ctx)
+                    if (typeof rendered === 'string') {
+                        html += rendered
+                        handledByPlugin = true
+                        break
+                    }
+                }
+            }
+            if (handledByPlugin) continue
+
             // Horizontal rule (3+ of same -, *, or _ with optional spaces)
             if (/^\s{0,3}([-*_])\s*(\1\s*){2,}$/.test(line)) {
                 html += this.colorSpan('colorHorizontalRule', this.escapeHtml(line))
@@ -362,7 +392,7 @@ export class MdEditor {
         this.highlightLayer.innerHTML = html + '\n'
     }
 
-    highlightInline(line) {
+    highlightInline(line, opts = {}) {
         // Split the line into protected tokens (inline code and bare URLs) and plain text.
         // Protected tokens are emitted verbatim (only HTML-escaped), so markdown inside them
         // — e.g. the underscores in https://host/a_b_c — is never treated as formatting.
@@ -406,13 +436,13 @@ export class MdEditor {
                 result += '<span style="color:rgba(' + this.props.colorLink + ',1);text-decoration:underline">'
                     + this.escapeHtml(seg.content) + '</span>'
             } else {
-                result += this.highlightTextSegment(this.escapeHtml(seg.content))
+                result += this.highlightTextSegment(this.escapeHtml(seg.content), opts)
             }
         }
         return result
     }
 
-    highlightTextSegment(escaped) {
+    highlightTextSegment(escaped, opts = {}) {
         let result = escaped
         const c = (prop) => this.props[prop]
 
@@ -432,9 +462,12 @@ export class MdEditor {
             return r
         })
 
-        // Ordered list markers
-        result = result.replace(/^([\t ]*)(\d+\. )/, (_, tabs, marker) =>
-            tabs + this.colorSpan('colorList', marker))
+        // Ordered list markers (a plugin can suppress this rule for a line via skipOrderedList,
+        // e.g. to keep "1. e4" as plain text outside an explicit list wrapper)
+        if (!opts.skipOrderedList) {
+            result = result.replace(/^([\t ]*)(\d+\. )/, (_, tabs, marker) =>
+                tabs + this.colorSpan('colorList', marker))
+        }
 
         // Images ![alt](url) and Links [text](url)
         result = result.replace(/(!?\[)(.*?)(\]\()(.+?)(\))/g, (_, p1, p2, p3, p4, p5) =>
