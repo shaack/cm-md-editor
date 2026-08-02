@@ -11,10 +11,23 @@ export class MdEditor {
     // Configurable per instance through the listIndent prop.
     static LIST_INDENT = '    '
 
+    // Unique-id counter for per-instance accessibility elements (aria-describedby).
+    static instanceCount = 0
+
     constructor(element, props) {
         this.element = element
         this.props = {
             listIndent: MdEditor.LIST_INDENT,
+            // Tab indents list lines / inserts a tab. Set false for plain textarea
+            // behaviour, where Tab moves focus to the next control. When true, the
+            // editor still stays keyboard-escapable: pressing Escape arms a one-shot
+            // release so the next Tab/Shift+Tab moves focus (WCAG 2.1.2).
+            indentWithTab: true,
+            // Screen-reader hint (aria-describedby) telling users how to move focus
+            // out of the editor with the keyboard. Only used when indentWithTab.
+            tabReleaseHint: 'Tab indents list items. Press Escape, then Tab, to move focus out of the editor.',
+            // Optional accessible name applied to the textarea.
+            ariaLabel: null,
             // Toolbar chrome tint (RGB triplet), applied at low alpha to the toolbar
             // background, borders, separators and button hover states.
             colorChrome: "128,128,128",
@@ -62,13 +75,38 @@ export class MdEditor {
         this.historyDebounce = null
         this.historyApplying = false // guard: suppress recording while we restore a snapshot
         this.historyLast = this.historySnapshot()
+        // One-shot flag: Escape sets it so the next Tab moves focus instead of
+        // indenting; any editing key clears it again (see handleKeyDown).
+        this.tabMovesFocus = false
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
+        this.element.addEventListener('blur', () => this.tabMovesFocus = false)
         this.createToolbar()
         this.createHighlightBackdrop()
         if (!this.wrapEnabled && this.highlightLayer) {
             this.highlightLayer.style.whiteSpace = 'pre'
             this.highlightLayer.style.overflowWrap = 'normal'
         }
+        this.setupAccessibility()
+    }
+
+    setupAccessibility() {
+        if (this.props.ariaLabel) {
+            this.element.setAttribute('aria-label', this.props.ariaLabel)
+        }
+        // With plain-textarea Tab behaviour there is no key trap to advise about.
+        if (!this.props.indentWithTab) return
+        this.element.setAttribute('aria-keyshortcuts', 'Escape')
+        // A visually hidden hint, announced by screen readers on focus, that tells
+        // users how to leave the editor with the keyboard (WCAG 2.1.2 requires the
+        // escape method to be advertised).
+        const hint = document.createElement('span')
+        hint.id = 'md-editor-tabhelp-' + (MdEditor.instanceCount++)
+        hint.textContent = this.props.tabReleaseHint
+        hint.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;' +
+            'margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;'
+        this.element.insertAdjacentElement('afterend', hint)
+        const existing = this.element.getAttribute('aria-describedby')
+        this.element.setAttribute('aria-describedby', existing ? existing + ' ' + hint.id : hint.id)
     }
 
     createToolbar() {
@@ -704,17 +742,18 @@ export class MdEditor {
     }
 
     handleKeyDown(e) {
-        // Look at the whole current line, not only the part before the cursor, so a list line
-        // is recognised even when the cursor sits at its very start (Tab must indent there too).
-        const value = this.element.value
-        const start = this.element.selectionStart
-        const lineStart = value.lastIndexOf('\n', start - 1) + 1
-        let lineEnd = value.indexOf('\n', start)
-        if (lineEnd < 0) {
-            lineEnd = value.length
+        // Accessibility (WCAG 2.1.2, "No Keyboard Trap"): Escape arms a one-shot
+        // release so the next Tab / Shift+Tab moves focus out of the editor instead
+        // of indenting. Any other key re-arms indentation. Bare modifier keys must
+        // NOT disarm it, otherwise Shift+Tab (which fires a Shift keydown first)
+        // could never escape.
+        if (this.props.indentWithTab) {
+            if (e.key === 'Escape') {
+                this.tabMovesFocus = true
+            } else if (e.key !== 'Tab' && !['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) {
+                this.tabMovesFocus = false
+            }
         }
-        const currentLine = value.substring(lineStart, lineEnd)
-        const isListMode = currentLine.match(/^[\t ]*- /) || currentLine.match(/^[\t ]*\d+\. /)
         // Undo/redo via our own history stack (see constructor and undo()/redo()).
         // Cmd-Z / Cmd-Shift-Z (macOS) and Ctrl-Z / Ctrl-Y (Windows/Linux).
         const undoKey = e.key.toLowerCase()
@@ -747,15 +786,20 @@ export class MdEditor {
             }
         }
         if (e.key === 'Tab') {
+            // Let Tab move focus when indentation is disabled, or once Escape has
+            // armed the one-shot release. Not calling preventDefault lets the
+            // browser perform its native focus move.
+            if (!this.props.indentWithTab || this.tabMovesFocus) {
+                this.tabMovesFocus = false
+                return
+            }
+            // Indent (Tab) or outdent (Shift+Tab) the current line, in lists and
+            // everywhere else alike.
             e.preventDefault()
-            if (isListMode) {
-                if (!e.shiftKey) {
-                    this.insertTabAtLineStart()
-                } else {
-                    this.removeTab()
-                }
+            if (e.shiftKey) {
+                this.removeTab()
             } else {
-                this.insertTabAtCursorPosition()
+                this.insertTabAtLineStart()
             }
         } else if (e.key === 'Enter') {
             this.handleEnterKey(e)
@@ -796,12 +840,8 @@ export class MdEditor {
         }
     }
 
-    insertTabAtCursorPosition() {
-        this.insertTextAtCursor('\t')
-    }
-
-    // Markdown nests a list by indenting the child past the parent marker. For "- " that is
-    // two columns, so a list level is two spaces (the canonical form), not a tab.
+    // Indent the current line by one level (props.listIndent). In lists this nests the
+    // item under its parent; on any other line it simply indents the line.
     insertTabAtLineStart() {
         const start = this.element.selectionStart
         const before = this.element.value.substring(0, start)

@@ -31,12 +31,20 @@ describe("TestListEditing", () => {
         assert.equal(snapshot(textarea), "- item|")
     })
 
-    it("should insert a tab in a non-list line via Tab", () => {
+    it("should indent a non-list line at its start via Tab", () => {
         const {editor, textarea} = makeEditor("hello", 2)
         const e = keydown({key: "Tab"})
         editor.handleKeyDown(e)
         assert.true(e.defaultPrevented)
-        assert.equal(snapshot(textarea), "he\t|llo")
+        assert.equal(snapshot(textarea), "    he|llo")
+    })
+
+    it("should outdent a non-list line via Shift+Tab", () => {
+        const {editor, textarea} = makeEditor("    hello", 6)
+        const e = keydown({key: "Tab", shiftKey: true})
+        editor.handleKeyDown(e)
+        assert.true(e.defaultPrevented)
+        assert.equal(snapshot(textarea), "he|llo")
     })
 
     it("should indent a list line via Tab", () => {
