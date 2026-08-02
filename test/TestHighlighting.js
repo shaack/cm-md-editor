@@ -199,12 +199,18 @@ describe("TestHighlighting", () => {
             highlightLine(line, ctx) { ctx.state.n = (ctx.state.n || 0) + 1; seen.push(ctx.state.n); return null }
         }
         const {editor} = makeEditor("a\nb\nc", 0, 0, {tools: [Counter]})
+        // The constructor already ran one highlight pass over the (then empty)
+        // textarea; ignore it and measure only the pass over the seeded value.
+        seen.length = 0
         editor.updateHighlight()
         assert.equal(seen.join(","), "1,2,3")
     })
 
     it("should let a highlightLine plugin gate ordered lists by block state", () => {
-        const {editor} = makeEditor("1. a\n<list>\n2. b\n</list>", 0, 0, {tools: [ListGate]})
+        // Use a unique colorList so the count is unambiguous: by default colorList
+        // shares its RGB value with colorHtmlTagBracket, so the <list>/</list> tag
+        // brackets would otherwise be counted as ordered-list markers too.
+        const {editor} = makeEditor("1. a\n<list>\n2. b\n</list>", 0, 0, {tools: [ListGate], colorList: "7,8,9"})
         editor.updateHighlight()
         const html = editor.highlightLayer.innerHTML
         // Only "2. " (inside the wrapper) is colored as an ordered marker; "1. " stays plain text.

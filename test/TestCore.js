@@ -42,7 +42,9 @@ describe("TestCore", () => {
 
     it("should apply a custom colorChrome to the toolbar background", () => {
         const {editor, textarea} = makeEditor("x", 0, 0, {colorChrome: "10,20,30"})
-        const toolbar = textarea.previousElementSibling
+        // The toolbar sits after the textarea in the DOM (textarea first in tab
+        // order), so find it by role rather than by sibling position.
+        const toolbar = textarea.closest("div").querySelector('[role="toolbar"]')
         assert.true(toolbar.style.backgroundColor.includes("10, 20, 30"))
     })
 
