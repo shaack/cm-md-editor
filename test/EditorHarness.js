@@ -41,7 +41,24 @@ export function makeEditor(value = "", selStart = 0, selEnd = selStart, props = 
     textarea.value = value
     textarea.selectionStart = selStart
     textarea.selectionEnd = selEnd
+    // The seed value is applied after construction, so rebase the undo history on
+    // it, mirroring real use where the textarea already holds content when the
+    // editor is created.
+    editor.resetHistory()
     return {editor, textarea, container}
+}
+
+/**
+ * Simulate a user typing `text` at the current caret (replacing any selection):
+ * splice the value, move the caret, and fire the same `input` event the browser
+ * would, so the editor's history recording runs exactly as in real use.
+ */
+export function type(textarea, text) {
+    const s = textarea.selectionStart
+    const e = textarea.selectionEnd
+    textarea.value = textarea.value.slice(0, s) + text + textarea.value.slice(e)
+    textarea.selectionStart = textarea.selectionEnd = s + text.length
+    textarea.dispatchEvent(new InputEvent("input", {bubbles: true}))
 }
 
 /** Build a synthetic keydown event with the modifier flags a handler inspects. */

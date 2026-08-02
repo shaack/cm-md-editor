@@ -47,6 +47,21 @@ export class MdEditor {
             }
             return new entry(this)
         })
+        // --- Undo/redo history -------------------------------------------------
+        // A self-contained undo stack. We deliberately do NOT use the browser's
+        // native undo (document.execCommand('undo')): it is deprecated and, in
+        // WebKit/Safari especially, unreliable once the field has been edited
+        // programmatically. It can report success (execCommand returns true) yet
+        // silently change nothing, which leaves Cmd-Z dead. Tracking our own
+        // {value, selectionStart, selectionEnd} snapshots works identically in
+        // every browser and regardless of the surrounding page.
+        this.historyUndo = []
+        this.historyRedo = []
+        this.historyMax = 500
+        this.historyPending = null   // baseline captured before an uncommitted burst of edits
+        this.historyDebounce = null
+        this.historyApplying = false // guard: suppress recording while we restore a snapshot
+        this.historyLast = this.historySnapshot()
         this.element.addEventListener('keydown', (e) => this.handleKeyDown(e))
         this.createToolbar()
         this.createHighlightBackdrop()
@@ -253,7 +268,10 @@ export class MdEditor {
         this.element.addEventListener('scroll', syncScroll)
 
         // Update on input
-        this.element.addEventListener('input', () => this.updateHighlight())
+        this.element.addEventListener('input', () => {
+            this.recordHistory()
+            this.updateHighlight()
+        })
         new ResizeObserver(() => { syncStyles(); this.updateHighlight() }).observe(this.element)
         this.updateHighlight()
     }
@@ -578,9 +596,111 @@ export class MdEditor {
     }
 
     insertTextAtCursor(text) {
-        // execCommand is deprecated, but without alternative to insert text and preserve the correct undo/redo stack
+        // Replace the current selection (or insert at the caret) via the standard
+        // setRangeText API and notify listeners with an input event. We no longer
+        // use document.execCommand("insertText"): it is deprecated and unreliable
+        // in Safari, and the editor keeps its own undo history (see below), so the
+        // native undo stack no longer needs to be preserved.
         this.element.focus()
-        document.execCommand("insertText", false, text)
+        const start = this.element.selectionStart
+        const end = this.element.selectionEnd
+        this.element.setRangeText(text, start, end, 'end')
+        this.element.dispatchEvent(new InputEvent('input', {bubbles: true}))
+    }
+
+    // --- Undo/redo ----------------------------------------------------------
+
+    historySnapshot() {
+        return {
+            value: this.element.value,
+            selectionStart: this.element.selectionStart,
+            selectionEnd: this.element.selectionEnd
+        }
+    }
+
+    // Called on every input event. Remembers the state *before* the current burst
+    // of edits and, after a short idle pause, commits it as one undo step, so that
+    // continuous typing collapses into sensible chunks instead of one step per
+    // character. Any pending burst is also flushed by undo()/redo() before they act.
+    recordHistory() {
+        if (this.historyApplying) return
+        if (this.historyPending === null) {
+            this.historyPending = this.historyLast
+        }
+        this.historyRedo = []
+        if (this.historyDebounce) clearTimeout(this.historyDebounce)
+        this.historyDebounce = setTimeout(() => this.commitHistory(), 400)
+        this.historyLast = this.historySnapshot()
+    }
+
+    // Discard the undo/redo history and treat the current textarea value as the
+    // new baseline. Call this after replacing the content programmatically (e.g.
+    // after loading or saving a document) so the old content can't be undone into.
+    resetHistory() {
+        this.historyUndo = []
+        this.historyRedo = []
+        this.historyPending = null
+        if (this.historyDebounce) {
+            clearTimeout(this.historyDebounce)
+            this.historyDebounce = null
+        }
+        this.historyLast = this.historySnapshot()
+    }
+
+    commitHistory() {
+        if (this.historyDebounce) {
+            clearTimeout(this.historyDebounce)
+            this.historyDebounce = null
+        }
+        if (this.historyPending === null) return
+        this.historyUndo.push(this.historyPending)
+        if (this.historyUndo.length > this.historyMax) this.historyUndo.shift()
+        this.historyPending = null
+    }
+
+    restoreHistory(state) {
+        this.historyApplying = true
+        const previous = this.element.value
+        this.element.focus()
+        this.element.value = state.value
+        // Place the caret at the change site (end of the differing region), not at
+        // a stored position. Restoring the pre-edit selection would, for the very
+        // first snapshot, jump the caret to 0/0 (top-left) on the last undo.
+        const caret = this.changeCaret(previous, state.value)
+        this.element.selectionStart = this.element.selectionEnd = caret
+        this.updateHighlight()
+        // Let the host page react (dirty tracking, live preview, …). The guard
+        // above keeps this synthetic input out of the history.
+        this.element.dispatchEvent(new InputEvent('input', {bubbles: true}))
+        this.historyApplying = false
+        this.historyLast = this.historySnapshot()
+    }
+
+    // Index at the end of the region where strings `a` and `b` differ, derived
+    // from their common prefix and suffix. Used to position the caret after an
+    // undo/redo so it lands where the (un)done edit was.
+    changeCaret(a, b) {
+        const la = a.length, lb = b.length
+        const min = Math.min(la, lb)
+        let prefix = 0
+        while (prefix < min && a[prefix] === b[prefix]) prefix++
+        let suffix = 0
+        while (suffix < min - prefix && a[la - 1 - suffix] === b[lb - 1 - suffix]) suffix++
+        return lb - suffix
+    }
+
+    undo() {
+        this.commitHistory()
+        if (this.historyUndo.length === 0) return
+        this.historyRedo.push(this.historySnapshot())
+        this.restoreHistory(this.historyUndo.pop())
+    }
+
+    redo() {
+        this.commitHistory()
+        if (this.historyRedo.length === 0) return
+        this.historyUndo.push(this.historySnapshot())
+        this.restoreHistory(this.historyRedo.pop())
     }
 
     handleKeyDown(e) {
@@ -595,20 +715,19 @@ export class MdEditor {
         }
         const currentLine = value.substring(lineStart, lineEnd)
         const isListMode = currentLine.match(/^[\t ]*- /) || currentLine.match(/^[\t ]*\d+\. /)
-        // Route undo/redo to the native undo manager (issue #2). Safari stops firing
-        // its native Cmd-Z undo on a textarea once it has been edited via execCommand,
-        // but document.execCommand("undo"/"redo") still drives the same stack reliably.
+        // Undo/redo via our own history stack (see constructor and undo()/redo()).
         // Cmd-Z / Cmd-Shift-Z (macOS) and Ctrl-Z / Ctrl-Y (Windows/Linux).
         const undoKey = e.key.toLowerCase()
         if ((e.ctrlKey || e.metaKey) && (undoKey === 'z' || undoKey === 'y')) {
-            // Swallow the event fully — otherwise Safari sometimes performs odd
-            // browser-tab actions when the stack is empty and the command fails.
+            // Swallow the event fully — this both drives our own undo and stops the
+            // browser from performing stray tab/history actions on Cmd-Z (a real
+            // Safari behaviour when its native undo is unavailable).
             e.preventDefault()
             e.stopPropagation()
-            const command = (undoKey === 'y' || e.shiftKey) ? 'redo' : 'undo'
-            // Only run the command when the stack actually has something to do.
-            if (document.queryCommandEnabled(command)) {
-                document.execCommand(command)
+            if (undoKey === 'y' || e.shiftKey) {
+                this.redo()
+            } else {
+                this.undo()
             }
             return
         }

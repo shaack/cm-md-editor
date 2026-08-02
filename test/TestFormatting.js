@@ -49,7 +49,7 @@ describe("TestFormatting", () => {
         assert.equal(snapshot(textarea), "_[x]_")
     })
 
-    it("should swallow Ctrl/Cmd+Z and stop propagation (native undo path)", () => {
+    it("should swallow Ctrl/Cmd+Z and stop propagation (own undo stack)", () => {
         const {editor} = makeEditor("abc", 3)
         const e = keydown({key: "z", metaKey: true})
         editor.handleKeyDown(e)
