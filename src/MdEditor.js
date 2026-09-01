@@ -548,20 +548,23 @@ export class MdEditor {
     }
 
     highlightInline(line, opts = {}) {
-        // Split the line into protected tokens (inline code and bare URLs) and plain text.
-        // Protected tokens are emitted verbatim (only HTML-escaped), so markdown inside them
-        // — e.g. the underscores in https://host/a_b_c — is never treated as formatting.
+        // Split the line into protected tokens (inline code, html tags and bare URLs) and
+        // plain text. Protected tokens never reach the emphasis rules, so markdown inside
+        // them — e.g. the underscores in https://host/a_b_c or in <game pairing="a_b-c_d"/>
+        // — is never treated as formatting. Emphasis torn across a tag would inject spans
+        // into the tag's attributes and desynchronize the backdrop from the textarea.
         const segments = []
         let lastIndex = 0
-        // Inline code, OR an autolink: an http(s) URL not part of markdown link / html
-        // attribute syntax (that context is handled by highlightTextSegment instead).
-        const tokenRegex = /`[^`]+`|https?:\/\/[^\s<>()\[\]"'`]+/g
+        // Inline code, OR an html tag (quoted attribute values may contain any character),
+        // OR an autolink: an http(s) URL not part of markdown link syntax.
+        const tokenRegex = /`[^`]+`|<\/?[a-zA-Z][\w-]*(?:"[^"]*"|'[^']*'|[^<>"'])*>|https?:\/\/[^\s<>()\[\]"'`]+/g
         let match
 
         while ((match = tokenRegex.exec(line)) !== null) {
             const token = match[0]
             const isCode = token[0] === '`'
-            if (!isCode) {
+            const isTag = token[0] === '<'
+            if (!isCode && !isTag) {
                 // Only autolink a *bare* URL. When the character before it belongs to
                 // markdown/html syntax, leave the URL in the text so its surrounding
                 // construct (e.g. [text](url)) is highlighted as a whole.
@@ -573,7 +576,7 @@ export class MdEditor {
             if (match.index > lastIndex) {
                 segments.push({type: 'text', content: line.substring(lastIndex, match.index)})
             }
-            segments.push({type: isCode ? 'code' : 'url', content: token})
+            segments.push({type: isCode ? 'code' : isTag ? 'tag' : 'url', content: token})
             lastIndex = tokenRegex.lastIndex
         }
         if (lastIndex < line.length) {
@@ -587,6 +590,8 @@ export class MdEditor {
         for (const seg of segments) {
             if (seg.type === 'code') {
                 result += this.colorSpan('colorCode', this.escapeHtml(seg.content))
+            } else if (seg.type === 'tag') {
+                result += this.highlightHtmlTag(this.escapeHtml(seg.content))
             } else if (seg.type === 'url') {
                 result += '<span style="color:rgba(' + this.props.colorLink + ',1);text-decoration:underline">'
                     + this.escapeHtml(seg.content) + '</span>'
@@ -644,16 +649,31 @@ export class MdEditor {
         result = result.replace(/(\*\*)(.*?)(\*\*)/g, (_, p1, p2, p3) =>
             this.colorSpan('colorBold', p1) + this.colorSpan('colorBold', p2) + this.colorSpan('colorBold', p3))
 
-        // Italic _text_ or *text* (single asterisk, after bold has been handled)
-        result = result.replace(/((?:^|[^\\*]))(\_)(.*?[^\\])(\_)/g, (_, pre, p1, p2, p3) =>
+        // Italic _text_ or *text* (single asterisk, after bold has been handled).
+        // An underscore inside a word (snake_case, user names like Jan_Eric) is not an
+        // emphasis delimiter, per CommonMark: the opener must not follow a word character
+        // and the closer must not precede one.
+        result = result.replace(/((?:^|[^\\*\w]))(\_)(.*?[^\\])(\_)(?!\w)/g, (_, pre, p1, p2, p3) =>
             pre + this.colorSpan('colorItalic', p1) + this.colorSpan('colorItalic', p2) + this.colorSpan('colorItalic', p3))
         result = result.replace(/((?:^|[^\\*]))(\*)((?!\*).+?[^\\])(\*)/g, (_, pre, p1, p2, p3) =>
             pre + this.colorSpan('colorItalic', p1) + this.colorSpan('colorItalic', p2) + this.colorSpan('colorItalic', p3))
 
-        // HTML tags, three-tone: syntax characters (< / > = " ') in colorHtmlTagBracket,
-        // tag name in colorHtmlTag, attribute names in colorHtmlTagAttribute, attribute
-        // values in colorHtmlTagValue
-        result = result.replace(/(&lt;\/?)([a-zA-Z]\w*)(.*?)(\/?&gt;)/g, (_, p1, p2, p3, p4) => {
+        // Tool inline highlighting
+        for (const tool of this.tools) {
+            if (typeof tool.highlightInline === 'function') {
+                result = tool.highlightInline(result)
+            }
+        }
+
+        return result
+    }
+
+    // HTML tags, three-tone: syntax characters (< / > = " ') in colorHtmlTagBracket,
+    // tag name in colorHtmlTag, attribute names in colorHtmlTagAttribute, attribute
+    // values in colorHtmlTagValue. Receives one escaped tag token from highlightInline;
+    // tags are protected segments there, so no inline rule ever runs inside a tag.
+    highlightHtmlTag(escaped) {
+        return escaped.replace(/(&lt;\/?)([a-zA-Z][\w-]*)([\s\S]*?)(\/?&gt;)$/, (_, p1, p2, p3, p4) => {
             const attrs = p3.replace(/([\w-]+)(\s*=\s*)(["'])(.*?)\3/g, (m, name, eq, quote, value) =>
                 this.colorSpan('colorHtmlTagAttribute', name)
                 + this.colorSpan('colorHtmlTagBracket', eq + quote)
@@ -664,15 +684,6 @@ export class MdEditor {
                 + this.colorSpan('colorHtmlTag', attrs)
                 + this.colorSpan('colorHtmlTagBracket', p4)
         })
-
-        // Tool inline highlighting
-        for (const tool of this.tools) {
-            if (typeof tool.highlightInline === 'function') {
-                result = tool.highlightInline(result)
-            }
-        }
-
-        return result
     }
 
     toggleWrapMode() {

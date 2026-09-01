@@ -138,6 +138,47 @@ describe("TestHighlighting", () => {
         assert.false(html.includes("rgba(" + editor.props.colorItalic + ",1)"))
     })
 
+    it("should not italicise an underscore inside a word", () => {
+        const {editor} = makeEditor()
+        // Two intraword underscores on one line (snake_case, user names like Jan_Eric)
+        // must not pair up to italic.
+        assert.false(segment(editor, "snake_case and other_name").includes("rgba(" + editor.props.colorItalic + ",1)"))
+    })
+
+    it("should still italicise a word-bounded underscore pair on the same line", () => {
+        const {editor} = makeEditor()
+        assert.true(segment(editor, "before _ital_ after").includes("rgba(" + editor.props.colorItalic + ",1)"))
+    })
+
+    it("should protect html tags from the emphasis rules", () => {
+        // Unique colorItalic: by default it shares its RGB value with
+        // colorHtmlTagAttribute, so the attribute names would count as italic here.
+        const {editor} = makeEditor("", 0, 0, {colorItalic: "1,2,3"})
+        // Underscores inside tag attributes must not become italic; the attribute
+        // values keep their tag-value color.
+        const html = editor.highlightInline('<game pairing="Jan_Eric-shaack" view="Jan_Eric"/>')
+        assert.false(html.includes("rgba(" + editor.props.colorItalic + ",1)"))
+        assert.true(html.includes("rgba(" + editor.props.colorHtmlTagValue + ",1)"))
+    })
+
+    it("should keep the backdrop text identical to the source for a crosstable line", () => {
+        const {editor} = makeEditor()
+        // The manual-tournament crosstable case: many underscores in one line, inside
+        // and outside of tags. Stripping the color spans must give back exactly the
+        // escaped source, otherwise the backdrop shows phantom characters and shifts
+        // the caret against the textarea.
+        const line = '| ~Jan_Eric | <game pairing="Jan_Eric-shaack" view="Jan_Eric"/> <score view="Jan_Eric" games="row"/> |'
+        const html = editor.highlightInline(line)
+        assert.equal(html.replace(/<[^>]*>/g, ""), editor.escapeHtml(line))
+    })
+
+    it("should still apply emphasis in the text around a tag", () => {
+        const {editor} = makeEditor()
+        const html = editor.highlightInline('**b** <game pairing="a_b-c_d"/> _i_')
+        assert.true(html.includes("rgba(" + editor.props.colorBold + ",1)"))
+        assert.true(html.includes("rgba(" + editor.props.colorItalic + ",1)"))
+    })
+
     it("should protect inline code from other inline rules", () => {
         const {editor} = makeEditor()
         const html = editor.highlightInline("`**not bold**`")
