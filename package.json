@@ -4,8 +4,7 @@
   "description": "a simple markdown editor",
   "main": "index.js",
   "scripts": {
-    "test": "tput setaf 4; echo 'Open test/index.html in your browser for unit testing, or `npm run test:headless` (needs a global puppeteer).'; echo ''; exit 0",
-    "test:headless": "node test/headless.mjs"
+    "test": "teevi"
   },
   "repository": {
     "type": "git",
@@ -20,6 +19,6 @@
   "author": "shaack.com",
   "license": "MIT",
   "devDependencies": {
-    "teevi": "^2.4.1"
+    "teevi": "^2.7.0"
   }
 }
