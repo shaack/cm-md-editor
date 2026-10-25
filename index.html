@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>cm-md-editor</title>
     <link rel="stylesheet" href="src/cm-md-editor.css">
+    <style>
+        /* the font of the chessmail forum editor (textarea.mde-prose, Bootstrap's --bs-font-sans-serif) */
+        textarea {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        }
+    </style>
 </head>
 <body>
 <div>
@@ -83,9 +89,15 @@ This has <mark>inline HTML</mark> and a <br> tag.</textarea>
     import {Separator} from "./src/tools/Separator.js"
     import {DummyText} from "./example-addon-tools/DummyText.js"
 
-    new MdEditor(document.getElementById('editor'), {
+    const editor = new MdEditor(document.getElementById('editor'), {
         tools: [...defaultTools, Separator, DummyText]
     })
+
+    // index.html?debug draws the real textarea text in translucent red over the highlight layer,
+    // where both layers match the glyphs blend, where they don't you see doubled text
+    if (new URLSearchParams(location.search).has('debug')) {
+        editor.element.style.color = 'rgba(255,60,60,0.55)'
+    }
 </script>
 </body>
 </html>

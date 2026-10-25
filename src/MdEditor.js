@@ -232,9 +232,10 @@ export class MdEditor {
         this.wrapButton.tabIndex = -1
         this.wrapButton.setAttribute('aria-label', this.wrapButton.title)
         toolbar.appendChild(this.wrapButton)
-        // Apply saved wrap state
+        // Apply saved wrap state. break-spaces instead of the textarea default pre-wrap, so spaces at a
+        // soft wrap break to the next line instead of hanging past the edge and dragging the caret along
+        this.element.style.whiteSpace = this.wrapEnabled ? 'break-spaces' : 'pre'
         if (!this.wrapEnabled) {
-            this.element.style.whiteSpace = 'pre'
             this.element.style.overflowX = 'auto'
         }
         // Which button the toolbar is entered on; moves with the focus so re-entering
@@ -368,7 +369,12 @@ export class MdEditor {
         // Copy textarea computed styles to backdrop
         const cs = window.getComputedStyle(this.element)
         this.backdrop.style.cssText = `position:absolute;overflow:hidden;pointer-events:none;z-index:1;`
-        this.highlightLayer.style.cssText = `white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;`
+        // Kerning and ligatures off on both layers: WebKit doesn't kern or ligate across the span
+        // boundaries of the highlight layer, so with a proportional font the layer runs wider than
+        // the textarea and the two drift apart along the line
+        this.highlightLayer.style.cssText = `white-space:break-spaces;word-wrap:break-word;overflow-wrap:break-word;font-kerning:none;font-variant-ligatures:none;`
+        this.element.style.fontKerning = 'none'
+        this.element.style.fontVariantLigatures = 'none'
 
         const syncStyles = () => {
             const cs = window.getComputedStyle(this.element)
@@ -690,9 +696,9 @@ export class MdEditor {
         this.wrapEnabled = !this.wrapEnabled
         localStorage.setItem(this.wrapStorageKey, this.wrapEnabled)
         const wrap = this.wrapEnabled
-        this.element.style.whiteSpace = wrap ? 'pre-wrap' : 'pre'
+        this.element.style.whiteSpace = wrap ? 'break-spaces' : 'pre'
         this.element.style.overflowX = wrap ? 'hidden' : 'auto'
-        this.highlightLayer.style.whiteSpace = wrap ? 'pre-wrap' : 'pre'
+        this.highlightLayer.style.whiteSpace = wrap ? 'break-spaces' : 'pre'
         this.highlightLayer.style.overflowWrap = wrap ? 'break-word' : 'normal'
         this.wrapButton.style.opacity = wrap ? '0.9' : '0.4'
         this.updateHighlight()
