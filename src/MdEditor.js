@@ -193,6 +193,8 @@ export class MdEditor {
         toolbar.style.cssText = `order:-1;display:flex;gap:1px;padding:2px;flex-wrap:wrap;background:rgba(${chrome},0.15);border:1px solid rgba(${chrome},0.3);border-bottom:none;border-radius:4px 4px 0 0;box-sizing:border-box;width:100%;`
         wrapper.appendChild(toolbar)
         this.element.style.borderRadius = '0 0 4px 4px'
+        // The toolbar takes over the space the page reserved for it before the script ran
+        this.element.classList.remove('mde-pending')
         // WAI-ARIA toolbar pattern: one tab stop, arrow keys move between the
         // buttons (roving tabindex), Escape returns to the textarea.
         this.toolbarElement = toolbar

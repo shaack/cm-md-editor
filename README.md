@@ -40,6 +40,14 @@ npm install cm-md-editor
 
 This creates an editor with the default toolbar: Headings (h1–h3), Bold, Italic, Strikethrough, Highlight, Unordered List, Ordered List, Insert Link, Insert Image.
 
+### Avoiding the layout jump on load
+
+The toolbar is inserted above the textarea when the script runs, which pushes the textarea down. To keep it in place, give the textarea the class `mde-pending` and include `src/cm-md-editor.css` (or copy its `textarea.mde-pending` rule). It reserves the toolbar height above the textarea and fills it with the toolbar background, and the editor removes the class when it creates the toolbar.
+
+```html
+<textarea id="editor" class="mde-pending"></textarea>
+```
+
 ### Setting the value programmatically
 
 The editor renders the visible, syntax-highlighted text in an overlay and makes the textarea's own text transparent. That overlay repaints on the textarea's native `input` event. So when you change `textarea.value` **from code** — an autocomplete dropdown, a toolbar action outside the editor, a paste transform — no `input` event fires, the overlay keeps the old text, and the new text stays invisible until the next keystroke.
