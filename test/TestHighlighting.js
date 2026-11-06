@@ -321,4 +321,16 @@ describe("TestHighlighting", () => {
         const orderedColor = new RegExp("rgba\\(" + editor.props.colorList + ",1\\)", "g")
         assert.equal((html.match(orderedColor) || []).length, 1)
     })
+
+    it("should move the highlight layer with the textarea scroll after a highlight pass", () => {
+        const text = Array.from({length: 80}, (_, i) => "line " + i).join("\n")
+        const {editor, textarea} = makeEditor(text)
+        textarea.style.height = "120px"
+        textarea.style.whiteSpace = "pre"
+        // A scroll set by code, the scroll event has not fired yet
+        textarea.scrollTop = 200
+        assert.true(textarea.scrollTop > 0)
+        editor.updateHighlight()
+        assert.equal(editor.highlightLayer.style.transform, "translate(0px, " + (-textarea.scrollTop) + "px)")
+    })
 })
