@@ -51,10 +51,15 @@ describe("TestHighlighting", () => {
         assert.equal(marked.highlightLayer.getBoundingClientRect().height, plain.highlightLayer.getBoundingClientRect().height)
     })
 
-    it("should not wrap empty lines", () => {
-        const {editor} = makeEditor("a\n\nb", 0, 0, {lineClass: () => "marked"})
-        editor.updateHighlight()
-        assert.equal(editor.highlightLayer.querySelectorAll(".marked").length, 2)
+    it("should give a wrapped empty line the height of a line", () => {
+        const plain = makeEditor("a\n\nb").editor
+        const marked = makeEditor("a\n\nb", 0, 0, {lineClass: () => "marked"}).editor
+        plain.updateHighlight()
+        marked.updateHighlight()
+        const spans = marked.highlightLayer.querySelectorAll(".marked")
+        assert.equal(spans.length, 3)
+        assert.equal(spans[1].getBoundingClientRect().height, spans[0].getBoundingClientRect().height)
+        assert.equal(marked.highlightLayer.getBoundingClientRect().height, plain.highlightLayer.getBoundingClientRect().height)
     })
 
     it("should mark a range of characters", () => {

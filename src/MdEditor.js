@@ -613,7 +613,7 @@ export class MdEditor {
      * Wraps the lines for which props.lineClass returns a class name in a span
      * over the full width. The highlighted html has one entry per source line,
      * joined with newlines, and no span runs over a line end, so it can be split.
-     * Empty lines stay as they are, an empty inline block has no height.
+     * An empty line gets the height of a line, so a run of marked lines has no gaps.
      */
     decorateLines(html, lines) {
         const parts = html.split('\n')
@@ -621,11 +621,11 @@ export class MdEditor {
             return html // a plugin rendered a line break, the lines no longer line up
         }
         return parts.map((part, i) => {
-            const className = part ? this.props.lineClass(i, lines[i]) : null
+            const className = this.props.lineClass(i, lines[i])
             if (!className) {
                 return part
             }
-            return '<span class="' + this.escapeHtml(String(className)) + '" style="display:inline-block;width:100%;vertical-align:top">' + part + '</span>'
+            return '<span class="' + this.escapeHtml(String(className)) + '" style="display:inline-block;width:100%;min-height:1lh;vertical-align:top">' + part + '</span>'
         }).join('\n')
     }
 
