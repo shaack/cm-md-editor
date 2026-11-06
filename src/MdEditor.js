@@ -69,6 +69,11 @@ export class MdEditor {
             // over the full width, so CSS can give whole lines a background, e.g. to
             // mark lines the application treats in a special way.
             lineClass: null,
+            // Optional function (text) => array of {start, end, className}, called on each
+            // highlight pass with the whole text. Each range, given as offsets into the
+            // text, gets a span with that class, e.g. to give a part of a line a background.
+            // Unlike lineClass the span covers only the characters, not the full width.
+            rangeClass: null,
             iconsPath: new URL('./tools/icons/', import.meta.url).href,
             tools: defaultTools,
             ...props
@@ -561,6 +566,47 @@ export class MdEditor {
         }
         // Trailing newline so the backdrop height matches the textarea
         this.highlightLayer.innerHTML = html + '\n'
+        if (typeof this.props.rangeClass === 'function') {
+            const ranges = this.props.rangeClass(text) || []
+            ranges.forEach(range => this.markRange(range.start, range.end, range.className))
+        }
+    }
+
+    /**
+     * Wraps the characters from start to end of the highlight layer in spans with
+     * the class. The text of the layer is the text of the textarea, so the offsets
+     * are the same. A range over several colored spans gets one span per piece.
+     */
+    markRange(start, end, className) {
+        if (!(end > start) || !className) {
+            return
+        }
+        const walker = document.createTreeWalker(this.highlightLayer, NodeFilter.SHOW_TEXT)
+        const pieces = []
+        let offset = 0
+        for (let node = walker.nextNode(); node && offset < end; node = walker.nextNode()) {
+            const length = node.nodeValue.length
+            const from = Math.max(start, offset) - offset
+            const to = Math.min(end, offset + length) - offset
+            if (to > from) {
+                pieces.push([node, from, to])
+            }
+            offset += length
+        }
+        // the text nodes are split after the walk, so the walk sees the unchanged layer
+        pieces.forEach(([node, from, to]) => {
+            let piece = node
+            if (from > 0) {
+                piece = piece.splitText(from)
+            }
+            if (to - from < piece.nodeValue.length) {
+                piece.splitText(to - from)
+            }
+            const span = document.createElement('span')
+            span.className = className
+            piece.parentNode.insertBefore(span, piece)
+            span.appendChild(piece)
+        })
     }
 
     /**

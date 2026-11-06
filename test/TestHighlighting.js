@@ -57,6 +57,28 @@ describe("TestHighlighting", () => {
         assert.equal(editor.highlightLayer.querySelectorAll(".marked").length, 2)
     })
 
+    it("should mark a range of characters", () => {
+        const text = "---\ntitle: Hello\n---"
+        const {editor} = makeEditor(text, 0, 0, {
+            rangeClass: () => [{start: 4, end: 10, className: "key"}]
+        })
+        editor.updateHighlight()
+        const marked = editor.highlightLayer.querySelectorAll(".key")
+        assert.equal(marked.length, 1)
+        assert.equal(marked[0].textContent, "title:")
+        assert.equal(editor.highlightLayer.textContent, text + "\n")
+    })
+
+    it("should mark a range over several colored spans", () => {
+        const {editor} = makeEditor("a **bold** b", 0, 0, {
+            rangeClass: () => [{start: 0, end: 8, className: "mark"}]
+        })
+        editor.updateHighlight()
+        const text = Array.from(editor.highlightLayer.querySelectorAll(".mark")).map(span => span.textContent).join("")
+        assert.equal(text, "a **bold")
+        assert.equal(editor.highlightLayer.textContent, "a **bold** b\n")
+    })
+
     it("should color a heading line", () => {
         const {editor} = makeEditor("# Title")
         editor.updateHighlight()
