@@ -62,6 +62,16 @@ describe("TestHighlighting", () => {
         assert.equal(marked.highlightLayer.getBoundingClientRect().height, plain.highlightLayer.getBoundingClientRect().height)
     })
 
+    it("should set the label a lineClass function returns", () => {
+        const {editor} = makeEditor("a\n---\nb", 0, 0, {
+            lineClass: (i, line) => line === "---" ? {className: "sep", label: "part \"2\" <b>"} : null
+        })
+        editor.updateHighlight()
+        const sep = editor.highlightLayer.querySelector(".sep")
+        assert.equal(sep.getAttribute("data-label"), "part \"2\" <b>")
+        assert.equal(editor.highlightLayer.textContent, "a\n---\nb\n")
+    })
+
     it("should mark a range of characters", () => {
         const text = "---\ntitle: Hello\n---"
         const {editor} = makeEditor(text, 0, 0, {

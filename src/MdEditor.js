@@ -67,7 +67,9 @@ export class MdEditor {
             // Optional function (index, line) => class name or null, called for every
             // line on each highlight pass. A returned class wraps that line in a span
             // over the full width, so CSS can give whole lines a background, e.g. to
-            // mark lines the application treats in a special way.
+            // mark lines the application treats in a special way. It may also return
+            // {className, label}, the label is set as data-label on the span, for CSS
+            // to show with content: attr(data-label).
             lineClass: null,
             // Optional function (text) => array of {start, end, className}, called on each
             // highlight pass with the whole text. Each range, given as offsets into the
@@ -621,11 +623,14 @@ export class MdEditor {
             return html // a plugin rendered a line break, the lines no longer line up
         }
         return parts.map((part, i) => {
-            const className = this.props.lineClass(i, lines[i])
+            const result = this.props.lineClass(i, lines[i])
+            const className = result && typeof result === 'object' ? result.className : result
             if (!className) {
                 return part
             }
-            return '<span class="' + this.escapeHtml(String(className)) + '" style="display:inline-block;width:100%;min-height:1lh;vertical-align:top">' + part + '</span>'
+            const label = result && typeof result === 'object' && result.label
+                ? ' data-label="' + this.escapeHtml(String(result.label)).replace(/"/g, '&quot;') + '"' : ''
+            return '<span class="' + this.escapeHtml(String(className)) + '"' + label + ' style="display:inline-block;width:100%;min-height:1lh;vertical-align:top">' + part + '</span>'
         }).join('\n')
     }
 
