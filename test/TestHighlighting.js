@@ -31,6 +31,32 @@ class ListGate {
 
 describe("TestHighlighting", () => {
 
+    it("should wrap the lines a lineClass function names", () => {
+        const {editor} = makeEditor("<!-- hero -->\n\n# Title\n\n---", 0, 0, {
+            lineClass: (i, line) => line.startsWith("<!--") || line === "---" ? "marked" : null
+        })
+        editor.updateHighlight()
+        const marked = editor.highlightLayer.querySelectorAll(".marked")
+        assert.equal(marked.length, 2)
+        assert.equal(marked[0].textContent, "<!-- hero -->")
+        assert.equal(marked[1].textContent, "---")
+        assert.equal(editor.highlightLayer.textContent, "<!-- hero -->\n\n# Title\n\n---\n")
+    })
+
+    it("should keep the line height when a line is wrapped", () => {
+        const plain = makeEditor("one\ntwo\nthree").editor
+        const marked = makeEditor("one\ntwo\nthree", 0, 0, {lineClass: () => "marked"}).editor
+        plain.updateHighlight()
+        marked.updateHighlight()
+        assert.equal(marked.highlightLayer.getBoundingClientRect().height, plain.highlightLayer.getBoundingClientRect().height)
+    })
+
+    it("should not wrap empty lines", () => {
+        const {editor} = makeEditor("a\n\nb", 0, 0, {lineClass: () => "marked"})
+        editor.updateHighlight()
+        assert.equal(editor.highlightLayer.querySelectorAll(".marked").length, 2)
+    })
+
     it("should color a heading line", () => {
         const {editor} = makeEditor("# Title")
         editor.updateHighlight()

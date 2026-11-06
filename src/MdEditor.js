@@ -64,6 +64,11 @@ export class MdEditor {
             colorEscape: "128,128,128",
             colorFrontMatter: "128,128,200",
             wordWrap: true,
+            // Optional function (index, line) => class name or null, called for every
+            // line on each highlight pass. A returned class wraps that line in a span
+            // over the full width, so CSS can give whole lines a background, e.g. to
+            // mark lines the application treats in a special way.
+            lineClass: null,
             iconsPath: new URL('./tools/icons/', import.meta.url).href,
             tools: defaultTools,
             ...props
@@ -551,8 +556,31 @@ export class MdEditor {
 
             html += prefix + this.highlightInline(rest)
         }
+        if (typeof this.props.lineClass === 'function') {
+            html = this.decorateLines(html, lines)
+        }
         // Trailing newline so the backdrop height matches the textarea
         this.highlightLayer.innerHTML = html + '\n'
+    }
+
+    /**
+     * Wraps the lines for which props.lineClass returns a class name in a span
+     * over the full width. The highlighted html has one entry per source line,
+     * joined with newlines, and no span runs over a line end, so it can be split.
+     * Empty lines stay as they are, an empty inline block has no height.
+     */
+    decorateLines(html, lines) {
+        const parts = html.split('\n')
+        if (parts.length !== lines.length) {
+            return html // a plugin rendered a line break, the lines no longer line up
+        }
+        return parts.map((part, i) => {
+            const className = part ? this.props.lineClass(i, lines[i]) : null
+            if (!className) {
+                return part
+            }
+            return '<span class="' + this.escapeHtml(String(className)) + '" style="display:inline-block;width:100%;vertical-align:top">' + part + '</span>'
+        }).join('\n')
     }
 
     highlightInline(line, opts = {}) {

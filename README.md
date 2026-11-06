@@ -100,6 +100,7 @@ All props are optional. Pass them as the second argument to the constructor.
 |------|------|---------|-------------|
 | `tools` | `array` | `defaultTools` | Array of tool classes (or `[class, props]` tuples). See [Tools](#tools) |
 | `wordWrap` | `boolean` | `true` | Default word wrap state. Overridden by localStorage if the user has toggled it |
+| `lineClass` | `function` | `null` | `(index, line) => className` is called for every line on each highlight pass. A returned class wraps that line in a full-width span, so CSS can give the whole line a background, for example `.my-marked { background: rgba(255,200,0,0.12) }`. Return `null` to leave a line as it is. Empty lines are never wrapped. Call `editor.updateHighlight()` when the result changes for another reason than typing |
 | `listIndent` | `string` | `"    "` (four spaces) | One level of indentation, inserted/removed with Tab/Shift-Tab at the start of the current line. Tabs and two-space levels are still accepted when reading existing text |
 | `indentWithTab` | `boolean` | `true` | When `true`, Tab indents the current line and Shift+Tab outdents it (in lists and plain lines alike), and Escape then Tab moves focus out (see [Accessibility](#accessibility)). Set `false` for plain-textarea behaviour where Tab always moves focus |
 | `tabReleaseHint` | `string` | (English sentence) | Screen-reader hint (`aria-describedby`) describing how to move focus out with the keyboard. Only used when `indentWithTab` is `true` |
