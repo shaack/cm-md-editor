@@ -431,7 +431,6 @@ export class MdEditor {
 
         // Move textarea bg to backdrop, make textarea transparent so backdrop shows through
         this.backdrop.style.background = cs.getPropertyValue('background-color')
-        this.element.style.overscrollBehavior = 'none'
         this.element.style.background = 'transparent'
         this.element.style.position = 'relative'
         this.element.style.zIndex = '2'
@@ -605,6 +604,19 @@ export class MdEditor {
             ranges.forEach(range => this.markRange(range.start, range.end, range.className))
         }
         this.syncScroll()
+        this.syncOverscroll()
+    }
+
+    /**
+     * Stops the bounce at the ends of the textarea, which would move the text against the
+     * highlight layer, but only while the textarea has something to scroll. A textarea is a
+     * scroll container also when its text fits, and `overscroll-behavior: none` would then keep
+     * the page from scrolling under the mouse or the fingers.
+     */
+    syncOverscroll() {
+        const scrolls = this.element.scrollHeight > this.element.clientHeight
+            || this.element.scrollWidth > this.element.clientWidth
+        this.element.style.overscrollBehavior = scrolls ? 'none' : ''
     }
 
     /**

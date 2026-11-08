@@ -333,4 +333,17 @@ describe("TestHighlighting", () => {
         editor.updateHighlight()
         assert.equal(editor.highlightLayer.style.transform, "translate(0px, " + (-textarea.scrollTop) + "px)")
     })
+
+    it("should stop the bounce only while the textarea has something to scroll", () => {
+        const {editor, textarea} = makeEditor("short")
+        textarea.style.height = "120px"
+        editor.updateHighlight()
+        assert.equal(textarea.style.overscrollBehavior, "", "a short text lets the page scroll")
+        textarea.value = Array.from({length: 80}, (_, i) => "line " + i).join("\n")
+        editor.updateHighlight()
+        assert.equal(textarea.style.overscrollBehavior, "none")
+        textarea.value = "short again"
+        editor.updateHighlight()
+        assert.equal(textarea.style.overscrollBehavior, "")
+    })
 })
